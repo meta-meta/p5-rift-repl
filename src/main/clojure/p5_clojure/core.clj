@@ -1,17 +1,23 @@
 (ns p5-clojure.core)
 
 (gen-class
-  :name p5-clojure.core.PAppClj
-  :extends processing.core.PApplet
+  :name p5-clojure.core.RiftReplClj
+  :extends com.generalprocessingunit.processing.vr.RiftRepl
   :prefix "p5-")
 
-(import processing.core.PApplet)
+(import com.generalprocessingunit.processing.vr.PAppletVR)
 
-(defn p5-setup [this]
-  (.size this 800 600))
+(defn p5-drawReplView [this eye pG]
+  (.background pG 10 10 (* 20 (Math/sin (/ (.millis this) 600))))
 
-(defn p5-draw [this]
-  (.background this 0 0 (* 255 (Math/sin (/ (.millis this) 1000)))))
+  (.stroke pG 255)
+  (.pushMatrix pG)
+
+  (.translate pG (* 1 (Math/cos (* 0.001 (.millis this)))) 1 1)
+  (.sphere pG 0.2)
+  (.popMatrix pG)
+
+  )
 
 (defn start []
-  (PApplet/main "p5-clojure.core.PAppClj"))
+  (PAppletVR/main "p5-clojure.core.RiftReplClj"))

@@ -26,6 +26,14 @@ repositories {
 }
 
 dependencies {
+	compile 'org.saintandreas:jovr:0.4.1.1'
+	compile project (':../human-interface-devices')
+	compile project (':../OSC')
+    compile project (':../p5-Helpers')
+    compile project (':../p5-Musical')
+    compile project (':../p5-Rift')
+    compile project (':../p5-Spatial')
+    compile project (':../p5-VR')
     compile project (':../processing/core')
     compile "org.clojure:clojure:1.6.0"
 }
@@ -39,7 +47,7 @@ idea {
 	    languageLevel = '1.8'
 	}
 	module {
-		name = 'p5-clojure'
+		name = 'p5-rift-repl'
 	}
 }
 
