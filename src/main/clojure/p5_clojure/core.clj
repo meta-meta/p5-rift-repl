@@ -15,6 +15,10 @@
 
   (.translate pG (* 1 (Math/cos (* 0.001 (.millis this)))) 1 1)
   (.sphere pG 0.2)
+
+  (.fill pG 255 0 0)
+  (.translate pG (* 1 (Math/cos (* 0.003 (.millis this)))) 1 1)
+  (.sphere pG 0.2)
   (.popMatrix pG)
 
   )

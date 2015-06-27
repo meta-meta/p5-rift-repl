@@ -51,7 +51,6 @@ public class RiftRepl extends PAppletVR {
     protected void updateState() {
     }
 
-    float hue = 0;
 
     boolean err;
 
@@ -77,17 +76,7 @@ public class RiftRepl extends PAppletVR {
         popMatrix();
     }
 
-    public void drawReplView(int eye, PGraphics pG) {
-//        hue += millis() % 2000 < 200 ? 1f : .2f ;
-//        hue %= 255;
-//
-//        pG.colorMode(HSB);
-//        pG.background(hue, 255, 40);
-//
-//        pG.directionalLight(hue, 200, 200, 0, -1f, 0);
-//        pG.directionalLight((hue + 60) % 255, 127, 60, 1f, -1f, 0);
-//        pG.directionalLight((hue + 120) % 255, 127, 60, 1f, -1f, 1);
-    }
+    public void drawReplView(int eye, PGraphics pG) {}
 
     void screen(PGraphics pG, PImage tex, float halfW, float halfH) {
 //        pG.colorMode(RGB);
