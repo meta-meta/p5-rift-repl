@@ -1,7 +1,7 @@
-(ns p5-clojure.core)
+(ns p5-rift-core)
 
 (gen-class
-  :name p5-clojure.core.RiftReplClj
+  :name p5-rift-core.RiftReplClj
   :extends com.generalprocessingunit.processing.vr.RiftRepl
   :prefix "p5-")
 
@@ -24,4 +24,4 @@
   )
 
 (defn start []
-  (PAppletVR/main "p5-clojure.core.RiftReplClj"))
+  (PAppletVR/main "p5-rift-core.RiftReplClj"))
