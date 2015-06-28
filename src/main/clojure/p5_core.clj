@@ -8,6 +8,7 @@
   :prefix "p5-")
 
 (import processing.core.PApplet)
+(import processing.core.PVector)
 (import com.generalprocessingunit.processing.space.Camera)
 
 (def cam (Camera.))
@@ -17,32 +18,69 @@
   (.parentSetup this) ;calls P5Repl.setup()
   )
 
-(defn p5-drawReplView [this pG spaceNav]
-  (.camera cam pG)
+;TODO: move this and others like it to another file
+(defn nice-orb [this pG spaceNav]
+  (.blendMode pG PApplet/ADD)
 
-  (.background pG 127 10 (* 200 (Math/sin (/ (.millis this) 600))))
 
-  (.fill pG 0 0 0 0)
-  (.stroke pG 255)
+  (.noFill pG)
+  (.sphereDetail pG 50)
+
+  (.stroke pG 255 0 0 10)
+  (.strokeWeight pG 200)
+
+
   (.pushMatrix pG)
 
   (let [[t r] [(.-translation spaceNav) (.-rotation spaceNav)]]
     (let [[x y z] [(.-x t) (.-y t) (.-z t)]]
-      (.translateWRTObjectCoords cam t )
+      (.translateWRTObjectCoords cam (PVector/mult t 0.01))
       (.rotate cam r )
       )
     )
 
-  (.translate pG 0 0.2 5)
-
-  (.rotateX pG -0.5)
-
-  (let [r (mod (/ (.millis this) 1000) PApplet/PI)]
+  (let [r (mod (/ (.millis this) 2000) PApplet/TWO_PI)]
     (.rotateY pG r)
     )
   (.sphere pG 0.6)
 
   (.popMatrix pG)
+
+  (.stroke pG 0 0 200 10)
+
+
+  (.pushMatrix pG)
+  (let [r (mod (/ (.millis this) 3000) PApplet/TWO_PI)]
+    (.rotateX pG r)
+    )
+  (.sphere pG 0.7)
+  (.popMatrix pG)
+
+  (.stroke pG 0 255 0 10)
+
+  (.pushMatrix pG)
+  (let [r (mod (/ (.millis this) 5000) PApplet/TWO_PI)]
+    (.rotateZ pG r)
+    )
+  (.sphere pG 0.8)
+  (.popMatrix pG)
+
+  (.stroke pG 244 255 255 10)
+
+  (.pushMatrix pG)
+  (let [r (mod (/ (.millis this) 1100) PApplet/TWO_PI)]
+    (.rotateX pG r)
+    )
+  (.sphere pG 0.8)
+  (.popMatrix pG)
+  )
+
+(defn p5-drawReplView [this pG spaceNav]
+  (.camera cam pG)
+
+  (.background pG 20 50 (* 100 (Math/sin (/ (.millis this) 600))))
+
+  (nice-orb this pG spaceNav)
 
   )
 
@@ -51,3 +89,5 @@
 
 ;(.yaw cam -0.1)
 ;(start)
+
+
