@@ -14,7 +14,7 @@
 (def cam (Camera.))
 
 (defn p5-setup [this]
-  (.size this 800 800 PApplet/OPENGL)
+  (.size this 1920 1000 PApplet/OPENGL)
   (.parentSetup this) ;calls P5Repl.setup()
   )
 
@@ -26,8 +26,8 @@
   (.noFill pG)
   (.sphereDetail pG 50)
 
-  (.stroke pG 255 0 0 10)
-  (.strokeWeight pG 200)
+  (.stroke pG 100 50 0 100)
+  (.strokeWeight pG 5)
 
 
   (.pushMatrix pG)
@@ -42,21 +42,23 @@
   (let [r (mod (/ (.millis this) 2000) PApplet/TWO_PI)]
     (.rotateY pG r)
     )
-  (.sphere pG 0.6)
+  (if (> 0.3 (rand)) (.sphere pG 0.6))
+
 
   (.popMatrix pG)
 
-  (.stroke pG 0 0 200 10)
+  (.stroke pG 0 50 100 100)
 
 
   (.pushMatrix pG)
   (let [r (mod (/ (.millis this) 3000) PApplet/TWO_PI)]
     (.rotateX pG r)
     )
-  (.sphere pG 0.7)
+
+  (if (> 0.2 (rand)) (.sphere pG 0.7))
   (.popMatrix pG)
 
-  (.stroke pG 0 255 0 10)
+  (.stroke pG 50 100 50 100)
 
   (.pushMatrix pG)
   (let [r (mod (/ (.millis this) 5000) PApplet/TWO_PI)]
@@ -65,7 +67,7 @@
   (.sphere pG 0.8)
   (.popMatrix pG)
 
-  (.stroke pG 244 255 255 10)
+  (.stroke pG 244 255 255 50)
 
   (.pushMatrix pG)
   (let [r (mod (/ (.millis this) 1100) PApplet/TWO_PI)]
@@ -78,7 +80,21 @@
 (defn p5-drawReplView [this pG spaceNav]
   (.camera cam pG)
 
-  (.background pG 20 50 (* 100 (Math/sin (/ (.millis this) 600))))
+  (.background pG 0 0 0 30)
+  ;(.background pG 0 50 (* 100 (Math/sin (/ (.millis this) 600))) 20)
+
+  (.sphereDetail pG 5)
+  (.fill pG 255 255 255 50)
+  (.pushMatrix pG)
+    (.translate pG 0 0 5)
+    (.sphere pG 0.2)
+  (.translate pG 0 3 0)
+  (.sphere pG 0.2)
+  (.translate pG 2 0 0)
+  (.sphere pG 0.2)
+  (.translate pG 0 3 -10)
+  (.sphere pG 0.2)
+  (.popMatrix pG)
 
   (nice-orb this pG spaceNav)
 
