@@ -19,7 +19,7 @@
   )
 
 ;TODO: move this and others like it to another file
-(defn nice-orb [this pG spaceNav]
+(defn nice-orb [this pG]
   (.blendMode pG PApplet/ADD)
 
 
@@ -31,13 +31,6 @@
 
 
   (.pushMatrix pG)
-
-  (let [[t r] [(.-translation spaceNav) (.-rotation spaceNav)]]
-    (let [[x y z] [(.-x t) (.-y t) (.-z t)]]
-      (.translateWRTObjectCoords cam (PVector/mult t 0.01))
-      (.rotate cam r )
-      )
-    )
 
   (let [r (mod (/ (.millis this) 2000) PApplet/TWO_PI)]
     (.rotateY pG r)
@@ -77,26 +70,68 @@
   (.popMatrix pG)
   )
 
+(defn drawStuff [pG p5]
+
+  (.colorMode pG PApplet/HSB)
+  (.blendMode pG PApplet/ADD)
+
+  (defn drawSphere [x y hue]
+
+    (.noFill pG)
+    (.strokeWeight pG (rand 10))
+    (.stroke pG hue 255 255 60)
+    (.sphereDetail pG (rand 10))
+
+    (.pushMatrix pG)
+    (.translate pG (* x 0.1) 0 (* y 0.1))
+    (.sphere pG (rand 0.1))
+    (.popMatrix pG)
+    )
+
+  (defn circleOfSpheres [n r]
+    (let [thetas (map (fn [x] (* x (/ PApplet/TWO_PI n))) (range 0 n))
+          xs (map (fn [theta] (* r (Math/sin theta))) thetas)
+          zs (map (fn [theta] (* r (Math/cos theta))) thetas)
+          hues (map (fn [a] (* a (/ 255 n))) (range 0 n))]
+      (doall (map drawSphere xs zs hues))
+      )
+    )
+
+  (defn drawCircle [i delta r]
+    (.pushMatrix pG)
+    (.translate pG 0 (* i delta) 0)
+    (.rotateY pG (* (if (== (mod i 2) 0) 1 -1) (/ (.millis p5) 3000)))
+    (circleOfSpheres 12 r)
+    (.popMatrix pG))
+
+  (defn stacky [n t]
+    (doall (map drawCircle (range 0 n) (repeat t) (range 0 n)))
+    )
+
+  (stacky 10 0.15)
+
+  )
+
 (defn p5-drawReplView [this pG spaceNav]
   (.camera cam pG)
 
-  (.background pG 0 0 0 30)
-  ;(.background pG 0 50 (* 100 (Math/sin (/ (.millis this) 600))) 20)
+  (.background pG 0 0 0 90)
 
-  (.sphereDetail pG 5)
-  (.fill pG 255 255 255 50)
-  (.pushMatrix pG)
-    (.translate pG 0 0 5)
-    (.sphere pG 0.2)
-  (.translate pG 0 3 0)
-  (.sphere pG 0.2)
-  (.translate pG 2 0 0)
-  (.sphere pG 0.2)
-  (.translate pG 0 3 -10)
-  (.sphere pG 0.2)
-  (.popMatrix pG)
+  (let [[t r] [(.-translation spaceNav) (.-rotation spaceNav)]]
+    (let [[x y z] [(.-x t) (.-y t) (.-z t)]]
+      (.translateWRTObjectCoords cam (PVector/mult t 0.01))
+      (.rotate cam r )
+      )
+    )
 
-  (nice-orb this pG spaceNav)
+  ;(.sphere pG 0.06)
+  ;(stalk this pG spaceNav)
+
+  ;(.translate pG 1 1 1)
+  ;(.sphere pG 0.1)
+  ;(.translate pG 1 1 1)
+  ;(.sphere pG 0.1)
+  (drawStuff pG this)
 
   )
 
