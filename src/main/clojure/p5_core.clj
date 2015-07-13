@@ -1,5 +1,6 @@
 (ns p5-core
-  (:import (processing.core.PApplet)))
+  (:import (processing.core.PApplet)
+           (com.generalprocessingunit.hid.megamux ExampleDevice)))
 
 (gen-class
   :name p5-core.P5ReplClj
@@ -14,8 +15,11 @@
 
 (def cam (Camera.))
 
+(def megamux (ExampleDevice.))
+
 (defn p5-setup [this]
-  (.size this 1920 1000 PApplet/OPENGL)
+  ;(.size this 800 600 PApplet/OPENGL)
+  (.size this (.-displayWidth this) (.-displayHeight this) PApplet/OPENGL)
   (.parentSetup this) ;calls P5Repl.setup()
   )
 
@@ -157,6 +161,7 @@
 
   (.pointLight pG 255 255 255 3 0 0)
 
+  (.noStroke pG)
   (.emissive pG 255)
   (.sphere pG 0.2)
   (.emissive pG 0)
@@ -218,22 +223,39 @@
       (.rotate obj r)
       )))
 
-(defn p5-drawReplView [this pG spaceNav]
+(defn getMegamux
+  (let [v (.getInputVal megamux 0)]
+    (.background pG (* 255 (/ (.getInputVal megamux 0) 1024)) 255 150)
+    (println v)
+    v
+    ))
+
+(defn p5-drawReplView [this pG spaceNav keys]
   (.camera cam pG)
 
-  (.background pG 20 20 60 255)
+  (.colorMode pG PApplet/HSB)
 
-  (doSpaceNav spaceNav cam)
-  ;(doRelativeSpaceNav spaceNav l cam)
+  (.background pG 20 20 25)
+
+
+  ;(println keys)
+  ;(.clear keys)
+
+  (if (get keys (Integer. 32))  ;spacebar
+    (doRelativeSpaceNav spaceNav l cam)
+    (doSpaceNav spaceNav cam)
+    )
 
   (drawStem pG this)
-
   ;(drawStackOfRings pG this)
 
   )
 
 (defn start []
-  (PApplet/main "p5-core.P5ReplClj"))
+  (PApplet/main (into-array ["--full-screen" "--display=1" "p5-core.P5ReplClj"])))
+
+;(defn start []
+;  (PApplet/main (into-array ["p5-core.P5ReplClj"])))
 
 ;(.yaw cam -0.1)
 ;(start)
