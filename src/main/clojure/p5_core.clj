@@ -17,6 +17,10 @@
 
 (def megamux (ExampleDevice.))
 
+(defmacro push-pop [pG & body]
+  (list 'do '(.pushMatrix pG) (cons 'do body) '(.popMatrix pG))
+  )
+
 (defn p5-setup [this]
   ;(.size this 800 600 PApplet/OPENGL)
   (.size this (.-displayWidth this) (.-displayHeight this) PApplet/OPENGL)
@@ -35,44 +39,39 @@
   (.strokeWeight pG 5)
 
 
-  (.pushMatrix pG)
+  (push-pop pG
 
-  (let [r (mod (/ (.millis this) 2000) PApplet/TWO_PI)]
-    (.rotateY pG r)
-    )
-  (if (> 0.3 (rand)) (.sphere pG 0.6))
+            (let [r (mod (/ (.millis this) 2000) PApplet/TWO_PI)]
+              (.rotateY pG r)
+              )
+            (if (> 0.3 (rand)) (.sphere pG 0.6)))
 
-
-  (.popMatrix pG)
 
   (.stroke pG 0 50 100 100)
 
 
-  (.pushMatrix pG)
-  (let [r (mod (/ (.millis this) 3000) PApplet/TWO_PI)]
-    (.rotateX pG r)
-    )
+  (push-pop pG
+    (let [r (mod (/ (.millis this) 3000) PApplet/TWO_PI)]
+      (.rotateX pG r)
+      )
 
-  (if (> 0.2 (rand)) (.sphere pG 0.7))
-  (.popMatrix pG)
+    (if (> 0.2 (rand)) (.sphere pG 0.7)))
 
   (.stroke pG 50 100 50 100)
 
-  (.pushMatrix pG)
-  (let [r (mod (/ (.millis this) 5000) PApplet/TWO_PI)]
-    (.rotateZ pG r)
-    )
-  (.sphere pG 0.8)
-  (.popMatrix pG)
+  (push-pop pG
+            (let [r (mod (/ (.millis this) 5000) PApplet/TWO_PI)]
+              (.rotateZ pG r)
+              )
+            (.sphere pG 0.8))
 
   (.stroke pG 244 255 255 50)
 
-  (.pushMatrix pG)
-  (let [r (mod (/ (.millis this) 1100) PApplet/TWO_PI)]
-    (.rotateX pG r)
-    )
-  (.sphere pG 0.8)
-  (.popMatrix pG)
+  (push-pop pG
+            (let [r (mod (/ (.millis this) 1100) PApplet/TWO_PI)]
+              (.rotateX pG r)
+              )
+            (.sphere pG 0.8))
   )
 
 (defn drawStackOfRings [pG p5]
@@ -118,7 +117,9 @@
 
 (def l (EuclideanSpaceObject.))
 
+
 (defn drawStem [pG p5]
+
   (defn cylinder [r1 r2 h sides]
     (.beginShape pG PApplet/QUAD_STRIP)
 
@@ -135,45 +136,43 @@
     (.endShape pG)
     )
 
-  ;(cylinder 0.1 0.5 5)
-
   (defn stem
     ([n heights sides radii] (stem n heights sides radii (repeat 0) (repeat 0)))
     ([n heights sides radii xRots zRots]
-     (.pushMatrix pG)
-     (doall (map (fn [i h r1 r2 xRot zRot]
+     (push-pop pG
+       (doall (map (fn [i h r1 r2 xRot zRot]
 
-                   (.rotateX pG xRot)
-                   (.rotateZ pG zRot)
-                   (cylinder r1 r2 h sides)
-                   (.translate pG 0 h 0))
+                     (.rotateX pG xRot)
+                     (.rotateZ pG zRot)
+                     (cylinder r1 r2 h sides)
+                     (.translate pG 0 h 0))
 
-                 (range 0 n) heights radii (drop 1 radii) xRots zRots))
-     (.popMatrix pG))
+                   (range 0 n) heights radii (drop 1 radii) xRots zRots))))
     )
 
 
-  (.pushMatrix pG)
-  (let [x (.x l) y (.y l) z (.z l)]
-    (.translate pG x y z))
-  (.lightFalloff pG 0.1 0.1 0.0001)
-  (.colorMode pG PApplet/RGB)
+  (push-pop pG                                              ;LIGHT
+            (let [x (.x l) y (.y l) z (.z l)]
+              (.translate pG x y z))
 
-  (.pointLight pG 255 255 255 3 0 0)
+            ; light
+            (.lightFalloff pG 0.1 0.1 0.0001)
+            (.colorMode pG PApplet/RGB)
+            (.pointLight pG 255 255 255 3 0 0)
 
-  (.noStroke pG)
-  (.emissive pG 255)
-  (.sphere pG 0.2)
-  (.emissive pG 0)
-  (.popMatrix pG)
+            ; bulb
+            (.noStroke pG)
+            (.emissive pG 255)
+            (.sphere pG 0.2)
+            (.emissive pG 0))
 
-  (.ambientLight pG 250 255 255 0 1 0 )
 
+  (.ambientLight pG 250 255 255 0 0 0 )
   (.colorMode pG PApplet/HSB)
   (.blendMode pG PApplet/BLEND)
 
 
-  (.beginShape pG)
+  (.beginShape pG)                                          ;FLOOR
   (.emissive pG (.color p5 20 0 0))
   (.vertex pG -1000 0 -1000)
   (.emissive pG (.color p5 50 0 0))
@@ -190,22 +189,20 @@
   (.strokeWeight pG 0.5)
 
 
-  (.fill pG 225 255 100)
-
-
-  (defn fib [a b] (cons a (lazy-seq (fib b (+ b a)))))
+  (defn fib [a b] (cons a (lazy-seq (fib b (+ b a)))))      ;MUSHROOM
+  (.fill pG 225 50 100)
   (stem 20 (repeat 3) 30 (fib 1 1))
 
+  ;green
   (.fill pG 100 255 100)
 
+  (push-pop pG                                              ;FERN
+            (.translate pG 20 0 0)
+            (stem 20 (range 2 0 -0.05) 3 (range 3 0.001 -0.1) (range 0 1000 0.06) (repeat 0)))
 
-  ;(stem 30 3 3 (repeatedly #(+ 1 (rand 2))))
-
-  (.translate pG 20 0 0)
-  (stem 20 (range 2 0 -0.05) 3 (range 3 0.001 -0.1) (range 0 1000 0.06) (repeat 0))
-
-  (.translate pG 0 0 20)
-  (stem 10 (repeat 3) 3 (repeatedly #(+ 1 (rand 3))))
+  (push-pop pG                                              ;PULSEY
+            (.translate pG 0 0 20)
+            (stem 10 (repeat 3) 3 (repeatedly #(+ 1 (rand 3)))))
 
   )
 
@@ -223,23 +220,29 @@
       (.rotate obj r)
       )))
 
-(defn getMegamux
-  (let [v (.getInputVal megamux 0)]
-    (.background pG (* 255 (/ (.getInputVal megamux 0) 1024)) 255 150)
-    (println v)
-    v
-    ))
+;(defn getMegamux
+;  (let [v (.getInputVal megamux 0)]
+;    (.background pG (* 255 (/ (.getInputVal megamux 0) 1024)) 255 150)
+;    (println v)
+;    v
+;    ))
 
 (defn p5-drawReplView [this pG spaceNav keys]
   (.camera cam pG)
 
+  (.blendMode pG PApplet/BLEND)
   (.colorMode pG PApplet/HSB)
 
   (.background pG 20 20 25)
 
+  (push-pop pG
+            (.translate pG 0 -5 20)
+            (.box pG 1)
 
-  ;(println keys)
-  ;(.clear keys)
+            (push-pop pG
+                      (.translate pG 3 2 10)
+                      (.box pG 2))
+            )
 
   (if (get keys (Integer. 32))  ;spacebar
     (doRelativeSpaceNav spaceNav l cam)
@@ -248,6 +251,8 @@
 
   (drawStem pG this)
   ;(drawStackOfRings pG this)
+
+  ;(nice-orb pG this)
 
   )
 
