@@ -1,6 +1,8 @@
 (ns p5-core
   (:import (processing.core.PApplet)
-           (com.generalprocessingunit.hid.megamux ExampleDevice)))
+           (com.generalprocessingunit.hid.megamux ExampleDevice)
+           (com.illposed.osc OSCListener)
+           (com.generalprocessingunit.io OSC)))
 
 (gen-class
   :name p5-core.P5ReplClj
@@ -26,6 +28,23 @@
   (.size this (.-displayWidth this) (.-displayHeight this) PApplet/OPENGL)
   (.parentSetup this) ;calls P5Repl.setup()
   )
+
+(def sounds (ref {}))
+
+(defn addListener [address]
+  (OSC/addListener address
+                   (reify OSCListener
+                     (acceptMessage [this time msg]
+                       (dosync
+                         (ref-set sounds
+                                  (merge
+                                    (deref sounds)
+                                    {address (.getArguments msg)})))
+                       ))))
+
+(doall (map addListener
+            (flatten ["/loudness" "/brightness" "/noisiness" "/bark" "/peaks"
+                      (map (fn [i] (str "/sines/" i)) (range 1 11))])))
 
 ;TODO: move this and others like it to another file
 (defn nice-orb [this pG]
@@ -198,11 +217,14 @@
 
   (push-pop pG                                              ;FERN
             (.translate pG 20 0 0)
-            (stem 20 (range 2 0 -0.05) 3 (range 3 0.001 -0.1) (range 0 1000 0.06) (repeat 0)))
+            (let [bright (first (get (deref sounds) "/brightness"))]
+              (println bright)
+              (stem 30 (range 2 0 -0.05) 3 (range 3 0.001 -0.1) (range 0 1000 (* 0.00001 bright)) (repeat 0))))
 
   (push-pop pG                                              ;PULSEY
             (.translate pG 0 0 20)
-            (stem 10 (repeat 3) 3 (repeatedly #(+ 1 (rand 3)))))
+            (let [noiz (first (get (deref sounds) "/noisiness"))]
+              (stem 10 (repeat 3) 3 (repeatedly #(+ 1 (rand (* 2 noiz)))))))
 
   )
 
@@ -226,6 +248,10 @@
 ;    (println v)
 ;    v
 ;    ))
+;
+
+
+
 
 (defn p5-drawReplView [this pG spaceNav keys]
   (.camera cam pG)

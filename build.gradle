@@ -36,6 +36,7 @@ dependencies {
     compile project (':../p5-VR')
     compile project (':../processing/core')
     compile "org.clojure:clojure:1.6.0"
+	compile 'com.illposed.osc:javaosc-core:0.3'
 }
 
 sourceCompatibility = 1.7
