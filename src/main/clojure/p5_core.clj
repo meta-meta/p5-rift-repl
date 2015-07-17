@@ -1,4 +1,5 @@
 (ns p5-core
+  (:use tone-shape)
   (:import (processing.core.PApplet)
            (com.generalprocessingunit.hid.megamux ExampleDevice)
            (com.illposed.osc OSCListener)
@@ -44,7 +45,7 @@
 
 (doall (map addListener
             (flatten ["/loudness" "/brightness" "/noisiness" "/bark" "/peaks"
-                      (map (fn [i] (str "/sines/" i)) (range 1 11))])))
+                      (map (fn [i] (str "/sines/" i)) (range 1 21))])))
 
 ;TODO: move this and others like it to another file
 (defn nice-orb [this pG]
@@ -219,7 +220,12 @@
             (.translate pG 20 0 0)
             (let [bright (first (get (deref sounds) "/brightness"))]
               (println bright)
-              (stem 30 (range 2 0 -0.05) 3 (range 3 0.001 -0.1) (range 0 1000 (* 0.00001 bright)) (repeat 0))))
+              (stem 30
+                    (range 2 0 -0.05)
+                    3
+                    (range 3 0.001 -0.1)
+                    (range 0 1000 (+ 0.02 (* 0.000005 bright)))
+                    (repeat 0))))
 
   (push-pop pG                                              ;PULSEY
             (.translate pG 0 0 20)
@@ -231,7 +237,7 @@
 (defn doSpaceNav [spaceNav obj]
   (let [[t r] [(.-translation spaceNav) (.-rotation spaceNav)]]
     (let [[x y z] [(.-x t) (.-y t) (.-z t)]]
-      (.translateWRTObjectCoords obj (PVector/mult t 0.1))
+      (.translateWRTObjectCoords obj (PVector/mult t 0.5))
       (.rotate obj r)
       )))
 
@@ -252,11 +258,12 @@
 
 
 
-
 (defn p5-drawReplView [this pG spaceNav keys]
   (.camera cam pG)
 
-  (.blendMode pG PApplet/BLEND)
+  (.blendMode pG PApplet/ADD)
+
+  ;(.blendMode pG PApplet/BLEND)
   (.colorMode pG PApplet/HSB)
 
   (.background pG 20 20 25)
@@ -275,7 +282,9 @@
     (doSpaceNav spaceNav cam)
     )
 
-  (drawStem pG this)
+  (tone-shape/draw this pG (deref sounds))
+
+  ;(drawStem pG this)
   ;(drawStackOfRings pG this)
 
   ;(nice-orb pG this)
@@ -283,7 +292,7 @@
   )
 
 (defn start []
-  (PApplet/main (into-array ["--full-screen" "--display=1" "p5-core.P5ReplClj"])))
+  (PApplet/main (into-array ["--display=1" "p5-core.P5ReplClj"])))
 
 ;(defn start []
 ;  (PApplet/main (into-array ["p5-core.P5ReplClj"])))
