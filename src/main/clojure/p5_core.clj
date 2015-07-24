@@ -1,13 +1,15 @@
 (ns p5-core
   (:use tone-shape)
+  (:use music_staff)
   (:import (processing.core.PApplet)
            (com.generalprocessingunit.hid.megamux ExampleDevice)
            (com.illposed.osc OSCListener)
-           (com.generalprocessingunit.io OSC)))
+           (com.generalprocessingunit.io OSC)
+           (com.generalprocessingunit.processing.space YawPitchRoll)))
 
 (gen-class
   :name p5-core.P5ReplClj
-  :extends com.generalprocessingunit.processing.P5Repl
+  :extends com.generalprocessingunit.processing.P5ReplDualMon
   :exposes-methods {setup parentSetup}                      ;exposes P5Repl.setup()
   :prefix "p5-")
 
@@ -16,7 +18,12 @@
 (import com.generalprocessingunit.processing.space.Camera)
 (import com.generalprocessingunit.processing.space.EuclideanSpaceObject)
 
-(def cam (Camera.))
+(defn resetCam []
+  (def camMount (EuclideanSpaceObject.))
+  (def cam [(Camera.) (Camera.)])
+  (.addChild camMount (first cam))
+  (.addChild camMount (last cam) (YawPitchRoll. PApplet/QUARTER_PI 0 0)))
+(resetCam)
 
 (def megamux (ExampleDevice.))
 
@@ -30,22 +37,47 @@
   (.parentSetup this) ;calls P5Repl.setup()
   )
 
-(def sounds (ref {}))
 
-(defn addListener [address]
+
+(def ccKeys (let [ccs (flatten [
+                                1                           ;modWheel
+                                (range 22 27)               ;transportButtons
+                                (range 27 34)               ;buttons B44 - B51
+                                (range 34 44)               ;buttons B52 - B60
+                                (range 75 84)               ;sliders
+                                (range 85 104)              ;dials bottom row
+                                (range 104 112)             ;dials middle row
+                                (range 112 119)             ;dials top row
+                                ])]
+              (map (fn [i] (str "/cc/" i)) ccs)))
+
+(def sounds (ref {}))
+(def cc (ref (zipmap ccKeys (repeat '(0)))))
+
+(defn addListener [address ref]
   (OSC/addListener address
                    (reify OSCListener
                      (acceptMessage [this time msg]
                        (dosync
-                         (ref-set sounds
+                         (ref-set ref
                                   (merge
-                                    (deref sounds)
+                                    (deref ref)
                                     {address (.getArguments msg)})))
                        ))))
 
 (doall (map addListener
-            (flatten ["/loudness" "/brightness" "/noisiness" "/bark" "/peaks"
-                      (map (fn [i] (str "/sines/" i)) (range 1 21))])))
+            (flatten (map (fn [i]
+                            (map (fn [a] (str "/" i a))
+                                 (flatten ["/loudness" "/brightness" "/noisiness" "/bark" "/peaks"
+                                           (map (fn [i] (str "/sines/" i)) (range 1 21))])))
+                          (range 0 8)
+                          ))
+            (repeat sounds)
+            ))
+
+(doall (map addListener ccKeys (repeat cc)))
+
+
 
 ;TODO: move this and others like it to another file
 (defn nice-orb [this pG]
@@ -94,21 +126,21 @@
             (.sphere pG 0.8))
   )
 
-(defn drawStackOfRings [pG p5]
+(defn drawStackOfRings [pG p5 sounds cc]
   (defn stacky [n t radii]
     (.colorMode pG PApplet/HSB)
     (.blendMode pG PApplet/ADD)
 
-    (defn drawSphere [x y hue]
+    (defn drawSphere [x y hue bright]
 
       (.noFill pG)
       (.strokeWeight pG (rand 10))
-      (.stroke pG hue 255 255 60)
+      (.stroke pG hue bright bright 60)
       (.sphereDetail pG (+ 5 (rand 3)))
 
       (.pushMatrix pG)
       (.translate pG (* x 0.1) 0 (* y 0.1))
-      (.sphere pG (rand 0.1))
+      (.sphere pG (rand (* 0.003 bright)))
       (.popMatrix pG)
       )
 
@@ -116,22 +148,27 @@
       (let [thetas (map (fn [x] (* x (/ PApplet/TWO_PI n))) (range 0 n))
             xs (map (fn [theta] (* r (Math/sin theta))) thetas)
             zs (map (fn [theta] (* r (Math/cos theta))) thetas)
-            hues (map (fn [a] (* a (/ 255 n))) (range 0 n))]
-        (doall (map drawSphere xs zs hues))
+            brights (map
+                      (fn [a] (* 25500 (last (get sounds (str "/0/sines/" (+ 1 a))))))
+                      (range 0 n))
+            hues (map
+                   (fn [a] (mod (* 0.5 (first (get sounds (str "/0/sines/" (+ 1 a))))) 255))
+                   (range 0 n))]
+        (doall (map drawSphere xs zs hues brights))
         )
       )
 
     (defn drawCircle [i delta r]
       (.pushMatrix pG)
       (.translate pG 0 (* i delta) 0)
-      (.rotateY pG (* (if (== (mod i 2) 0) 1 -1) (/ (.millis p5) 1000)))
-      (circleOfSpheres 12 r)
+      (.rotateY pG (* (if (== (mod i 2) 0) 1 -1) (/ (.millis p5) 8000)))
+      (circleOfSpheres 20 r)
       (.popMatrix pG))
 
     (doall (map drawCircle (range 0 n) (repeat t) radii))
     )
 
-  (stacky 10 0.07 (range 2 1000 0.5))
+  (stacky 12 0.5 (range 20 1000 0))
 
   )
 
@@ -218,8 +255,8 @@
 
   (push-pop pG                                              ;FERN
             (.translate pG 20 0 0)
-            (let [bright (first (get (deref sounds) "/brightness"))]
-              (println bright)
+            (let [bright (first (get (deref sounds) "/0/brightness"))]
+              ;(println bright)
               (stem 30
                     (range 2 0 -0.05)
                     3
@@ -229,20 +266,20 @@
 
   (push-pop pG                                              ;PULSEY
             (.translate pG 0 0 20)
-            (let [noiz (first (get (deref sounds) "/noisiness"))]
+            (let [noiz (first (get (deref sounds) "/0/noisiness"))]
               (stem 10 (repeat 3) 3 (repeatedly #(+ 1 (rand (* 2 noiz)))))))
 
   )
 
 (defn doSpaceNav [spaceNav obj]
-  (let [[t r] [(.-translation spaceNav) (.-rotation spaceNav)]]
+  (let [[t r] [(.getTranslation spaceNav) (.getRotation spaceNav)]]
     (let [[x y z] [(.-x t) (.-y t) (.-z t)]]
-      (.translateWRTObjectCoords obj (PVector/mult t 0.5))
+      (.translateWRTObjectCoords obj (PVector/mult t 0.05))
       (.rotate obj r)
       )))
 
 (defn doRelativeSpaceNav [spaceNav obj relTo]
-  (let [[t r] [(.-translation spaceNav) (.-rotation spaceNav)]]
+  (let [[t r] [(.getTranslation spaceNav) (.getRotation spaceNav)]]
     (let [[x y z] [(.-x t) (.-y t) (.-z t)]]
       (.translateObjWRTObjectCoords relTo (PVector/mult t 0.1) obj)
       (.rotate obj r)
@@ -256,33 +293,91 @@
 ;    ))
 ;
 
+; TODO detect condition, set flag with hash of condition and action, detect !condition set flag false
+(defn trigger [condition action])
 
 
-(defn p5-drawReplView [this pG spaceNav keys]
-  (.camera cam pG)
+(defn spaceNavSettings [spaceNav]
+  (.setCoefTranslation spaceNav 0.1)
+  (.setFrictionTranslation spaceNav 0.0007)
+  (.setCoefRotation spaceNav 0.005)
+  (.setFrictionRotation spaceNav 0.007)
+  )
 
-  (.blendMode pG PApplet/ADD)
+(defn p5-drawReplView [this pG mon spaceNav keys scroll]
+  (set! (.-fov (nth cam mon)) (Math/max 0.001 (* (* scroll 0.01) 1.12)))
+  (.camera (nth cam mon) pG)
+  (spaceNavSettings spaceNav)
+
+
+  (.blendMode pG PApplet/BURN)
+  ;(.blendMode pG PApplet/ADD)
 
   ;(.blendMode pG PApplet/BLEND)
   (.colorMode pG PApplet/HSB)
 
-  (.background pG 20 20 25)
-
-  (push-pop pG
-            (.translate pG 0 -5 20)
-            (.box pG 1)
-
-            (push-pop pG
-                      (.translate pG 3 2 10)
-                      (.box pG 2))
-            )
-
-  (if (get keys (Integer. 32))  ;spacebar
-    (doRelativeSpaceNav spaceNav l cam)
-    (doSpaceNav spaceNav cam)
+  (let [cc (deref cc)
+        h1 (int (* 2 (first (get cc "/cc/87"))))
+        s1 (int (* 2 (first (get cc "/cc/106"))))
+        b1 (int (* 2 (first (get cc "/cc/114"))))
+        h2 (int (* 2 (first (get cc "/cc/88"))))
+        s2 (int (* 2 (first (get cc "/cc/107"))))
+        b2 (int (* 2 (first (get cc "/cc/115"))))]
+    (if (= mon 0)
+      (.background pG h1 s1 b1 100)
+      (.background pG h2 s2 b2 100))
     )
 
-  (tone-shape/draw this pG (deref sounds))
+  (.setAlwaysOnTop (.-frame this) true)
+  ;(.noCursor this)
+  ;(.cursor this PApplet/ARROW)
+
+  (if (get keys (Integer. 38))
+    (println scroll))
+
+
+  ;(push-pop pG
+  ;          (.translate pG 0 -5 20)
+  ;          (.box pG 1)
+  ;
+  ;          (push-pop pG
+  ;                    (.translate pG 3 2 10)
+  ;                    (.box pG 2))
+  ;          )
+
+  ;(println keys)
+  (if (get keys (Integer. 32))  ;spacebar
+    (doRelativeSpaceNav spaceNav l camMount)
+    (if (get keys (Integer. 37))
+      (doSpaceNav spaceNav (nth cam 0))
+      (if (get keys (Integer. 39))
+        (doSpaceNav spaceNav (nth cam 1))
+        (doSpaceNav spaceNav camMount)
+        )
+      )
+    )
+
+  (let [cc (deref cc)
+        sounds (deref sounds)
+        a (int (first (get cc "/cc/27")))
+        b (int (first (get cc "/cc/28")))
+        c (int (first (get cc "/cc/29")))
+        d (int (first (get cc "/cc/30")))
+        e (int (first (get cc "/cc/31")))
+        f (int (first (get cc "/cc/32")))]
+    (if (= a 127)
+      (tone-shape/draw this pG sounds cc)
+      (if (= b 127)
+        (drawStackOfRings pG this sounds cc)
+        (if (= c 127)
+          (drawStem pG this)
+          )
+        )
+      )
+    )
+
+  ;(tone-shape/draw this pG (deref sounds) (deref cc))
+  ;(music_staff/drawme this pG (deref sounds))
 
   ;(drawStem pG this)
   ;(drawStackOfRings pG this)
@@ -292,7 +387,7 @@
   )
 
 (defn start []
-  (PApplet/main (into-array ["--display=1" "p5-core.P5ReplClj"])))
+  (PApplet/main (into-array ["--display=2" "--full-screen" "p5-core.P5ReplClj"])))
 
 ;(defn start []
 ;  (PApplet/main (into-array ["p5-core.P5ReplClj"])))
