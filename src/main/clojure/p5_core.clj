@@ -134,9 +134,10 @@
     (defn drawSphere [x y hue bright]
 
       (.noFill pG)
-      (.strokeWeight pG (rand 10))
-      (.stroke pG hue bright bright 60)
-      (.sphereDetail pG (+ 5 (rand 3)))
+      (.strokeWeight pG (rand 3))
+      (.stroke pG 255)
+      (.fill pG hue 255 bright 100)
+      (.sphereDetail pG (+ 3 (rand 5)))
 
       (.pushMatrix pG)
       (.translate pG (* x 0.1) 0 (* y 0.1))
@@ -161,14 +162,18 @@
     (defn drawCircle [i delta r]
       (.pushMatrix pG)
       (.translate pG 0 (* i delta) 0)
-      (.rotateY pG (* (if (== (mod i 2) 0) 1 -1) (/ (.millis p5) 8000)))
+      (.rotateY pG (*
+                     (if (== (mod i 2) 0) 1 -1)
+                     (* (.millis p5)
+                        (first (get cc "/cc/77"))
+                        0.00001)))
       (circleOfSpheres 20 r)
       (.popMatrix pG))
 
     (doall (map drawCircle (range 0 n) (repeat t) radii))
     )
 
-  (stacky 12 0.5 (range 20 1000 0))
+  (stacky 10 1 (range 90 1000 0.2))
 
   )
 

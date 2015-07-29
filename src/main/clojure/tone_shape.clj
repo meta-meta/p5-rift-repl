@@ -53,11 +53,11 @@
                                       ry (- (rand (* 2 l)) l)
                                       rz (- (rand (* 2 l)) l)
                                       ]
-                                  (.stroke pG sh ss sb)
-                                  (.strokeWeight pG (* 0.1 s))
+                                  (.stroke pG (+ sh (- (rand 90) 45)) ss sb (rand 100))
+                                  (.strokeWeight pG (rand (* 0.1 s)))
                                   (.line pG 0 0 0 rx ry rz)
                                   )
-                                (.stroke pG 140 100 255 (+ 1 (* 100 (last sines))))
+                                (.stroke pG 140 100 255 (+ 1 (* 150 (last sines))))
 
 
                                 (.scale pG 10 1 10)
