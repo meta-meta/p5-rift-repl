@@ -213,6 +213,37 @@
 
 (def l (EuclideanSpaceObject.))
 
+(defn drawTvNoise [pG track]
+  (defn getProp [propName]
+    (first (get (deref sounds) (str "/" track "/" propName))))
+
+  ;TODO: macro for 2D drawing
+  (.hint pG PApplet/DISABLE_DEPTH_MASK)
+  (.camera pG)
+  (.perspective pG)
+
+  (let [size (+ 10 (* 2 (getCC 79)))]
+
+    (doall (for [x (range 0 (.-width pG) size)
+                 y (range 0 (.-height pG) size)
+                 :let [r (<
+                           (rand)
+                           (* size 0.001 (getProp "noisiness") (getProp "noisiness") (getProp "noisiness")))]
+                 :when r]
+             (do
+               (.fill pG
+                      255
+                      0
+                      (rand 255)
+                      (* 2 (getCC 78)))
+               (.rect pG
+                      x y
+                      size size)
+               )
+             )))
+
+  (.hint pG PApplet/ENABLE_DEPTH_MASK)
+  )
 
 (defn drawStem [pG p5 track]
 
@@ -348,8 +379,8 @@
 (defn spaceNavSettings [spaceNav]
   (.setCoefTranslation spaceNav 0.1)
   (.setFrictionTranslation spaceNav 0.0007)
-  (.setCoefRotation spaceNav 0.005)
-  (.setFrictionRotation spaceNav 0.007)
+  (.setCoefRotation spaceNav 0.008)
+  (.setFrictionRotation spaceNav 0.0009)
   )
 
 (defn p5-drawReplView [this pG mon spaceNav keys scroll]
@@ -431,6 +462,8 @@
         )
       )
     )
+
+  (drawTvNoise pG (+ 1 mon))
 
   ;(tone-shape/draw this pG (deref sounds) (deref cc))
   ;(music_staff/drawme this pG (deref sounds))

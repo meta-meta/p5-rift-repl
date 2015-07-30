@@ -72,15 +72,17 @@
                                   (.line pG 0 0 0 rx ry rz)
                                   )
 
-
+                                ;meters
                                 (.strokeWeight pG 0.1)
-                                (.stroke pG 20 255 255 (+ 100 (* 150 (last sine)))) ;meters
+                                (.stroke pG 20 255 255 (+ 100 (* 150 (last sine))))
                                 (.scale pG 150 200 50)
                                 (.sphereDetail pG 4)
                                 (.sphere pG 0.1)
-                                (.popMatrix pG)
+                                (.popMatrix pG))
 
-                                ) (range 0 (* 10 (last sine)) 0.4)))
+                              (range 0                      ;meter levels
+                                     (* 30 (last sine))
+                                     0.4)))
                   )
                 (.popMatrix pG)
                 )
