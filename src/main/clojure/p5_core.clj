@@ -1,5 +1,5 @@
 (ns p5-core
-  (:use tone-shape)
+  (:use [tone-shape :only [draw]])
   (:use music_staff)
   (:import (processing.core.PApplet)
            (com.generalprocessingunit.hid.megamux ExampleDevice)
@@ -18,6 +18,10 @@
 (import com.generalprocessingunit.processing.space.Camera)
 (import com.generalprocessingunit.processing.space.EuclideanSpaceObject)
 
+(defmacro push-pop [pG & body]
+  (list 'do '(.pushMatrix pG) (cons 'do body) '(.popMatrix pG))
+  )
+
 (defn resetCam []
   (def camMount (EuclideanSpaceObject.))
   (def cam [(Camera.) (Camera.)])
@@ -25,11 +29,8 @@
   (.addChild camMount (last cam) (YawPitchRoll. PApplet/QUARTER_PI 0 0)))
 (resetCam)
 
-(def megamux (ExampleDevice.))
 
-(defmacro push-pop [pG & body]
-  (list 'do '(.pushMatrix pG) (cons 'do body) '(.popMatrix pG))
-  )
+
 
 (defn p5-setup [this]
   ;(.size this 800 600 PApplet/OPENGL)
@@ -37,7 +38,15 @@
   (.parentSetup this) ;calls P5Repl.setup()
   )
 
+;(def megamux (ExampleDevice.))
 
+
+
+;; OSC Listeners
+
+(defn setref [ref val]
+  (dosync
+    (ref-set ref val)))
 
 (def ccKeys (let [ccs (flatten [
                                 1                           ;modWheel
@@ -54,21 +63,23 @@
 (def sounds (ref {}))
 (def cc (ref (zipmap ccKeys (repeat '(0)))))
 
+(defn getCC [ccNum]
+  (first (get (deref cc) (str "/cc/" ccNum))))
+
 (defn addListener [address ref]
   (OSC/addListener address
                    (reify OSCListener
                      (acceptMessage [this time msg]
-                       (dosync
-                         (ref-set ref
-                                  (merge
-                                    (deref ref)
-                                    {address (.getArguments msg)})))
+                       (setref ref
+                               (merge
+                                 (deref ref)
+                                 {address (.getArguments msg)}))
                        ))))
 
 (doall (map addListener
             (flatten (map (fn [i]
                             (map (fn [a] (str "/" i a))
-                                 (flatten ["/loudness" "/brightness" "/noisiness" "/bark" "/peaks"
+                                 (flatten ["/loudness" "/brightness" "/noisiness" "/bark" "/peaks" "/pitch"
                                            (map (fn [i] (str "/sines/" i)) (range 1 21))])))
                           (range 0 8)
                           ))
@@ -76,6 +87,10 @@
             ))
 
 (doall (map addListener ccKeys (repeat cc)))
+
+
+
+
 
 
 
@@ -126,7 +141,20 @@
             (.sphere pG 0.8))
   )
 
-(defn drawStackOfRings [pG p5 sounds cc]
+
+
+
+(defn drawStackOfRings [pG p5 sounds cc track]
+  ;TODO: helper class
+  (defn getProp [propName]
+    (first (get sounds (str "/" track "/" propName))))
+
+  (defn getPitch []
+    (first (get sounds (str "/" track "/pitch"))))
+
+  (defn getSine [n]
+    (get sounds (str "/" track "/sines/" n)))
+
   (defn stacky [n t radii]
     (.colorMode pG PApplet/HSB)
     (.blendMode pG PApplet/ADD)
@@ -150,10 +178,16 @@
             xs (map (fn [theta] (* r (Math/sin theta))) thetas)
             zs (map (fn [theta] (* r (Math/cos theta))) thetas)
             brights (map
-                      (fn [a] (* 25500 (last (get sounds (str "/0/sines/" (+ 1 a))))))
+                      (fn [a]
+                        (* 25500
+                           (last (getSine track (+ 1 a)))))
                       (range 0 n))
             hues (map
-                   (fn [a] (mod (* 0.5 (first (get sounds (str "/0/sines/" (+ 1 a))))) 255))
+                   (fn [a]
+                     (mod (*
+                            0.5
+                            (first (getSine track (+ 1 a))))
+                          255))
                    (range 0 n))]
         (doall (map drawSphere xs zs hues brights))
         )
@@ -165,7 +199,7 @@
       (.rotateY pG (*
                      (if (== (mod i 2) 0) 1 -1)
                      (* (.millis p5)
-                        (first (get cc "/cc/77"))
+                        (getCC 77)
                         0.00001)))
       (circleOfSpheres 20 r)
       (.popMatrix pG))
@@ -180,7 +214,16 @@
 (def l (EuclideanSpaceObject.))
 
 
-(defn drawStem [pG p5]
+(defn drawStem [pG p5 track]
+
+  (defn getProp [propName]
+    (first (get sounds (str "/" track "/" propName))))
+
+  (defn getPitch []
+    (first (get sounds (str "/" track "/pitch"))))
+
+  (defn getSine [n]
+    (get sounds (str "/" track "/sines/" n)))
 
   (defn cylinder [r1 r2 h sides]
     (.beginShape pG PApplet/QUAD_STRIP)
@@ -260,7 +303,7 @@
 
   (push-pop pG                                              ;FERN
             (.translate pG 20 0 0)
-            (let [bright (first (get (deref sounds) "/0/brightness"))]
+            (let [bright (getProp track "brightness")]
               ;(println bright)
               (stem 30
                     (range 2 0 -0.05)
@@ -271,7 +314,7 @@
 
   (push-pop pG                                              ;PULSEY
             (.translate pG 0 0 20)
-            (let [noiz (first (get (deref sounds) "/0/noisiness"))]
+            (let [noiz (getProp track "noisiness")]
               (stem 10 (repeat 3) 3 (repeatedly #(+ 1 (rand (* 2 noiz)))))))
 
   )
@@ -315,22 +358,21 @@
   (spaceNavSettings spaceNav)
 
 
-  (.blendMode pG PApplet/BURN)
-  ;(.blendMode pG PApplet/ADD)
-
+  ;(.blendMode pG PApplet/BURN)
+  (.blendMode pG PApplet/ADD)
   ;(.blendMode pG PApplet/BLEND)
+
   (.colorMode pG PApplet/HSB)
 
-  (let [cc (deref cc)
-        h1 (int (* 2 (first (get cc "/cc/87"))))
-        s1 (int (* 2 (first (get cc "/cc/106"))))
-        b1 (int (* 2 (first (get cc "/cc/114"))))
-        h2 (int (* 2 (first (get cc "/cc/88"))))
-        s2 (int (* 2 (first (get cc "/cc/107"))))
-        b2 (int (* 2 (first (get cc "/cc/115"))))]
+  (let [h1 (int (* 2 (getCC 87 )))
+        s1 (int (* 2 (getCC 106)))
+        b1 (int (* 2 (getCC 114)))
+        h2 (int (* 2 (getCC 88 )))
+        s2 (int (* 2 (getCC 107)))
+        b2 (int (* 2 (getCC 115)))]
     (if (= mon 0)
-      (.background pG h1 s1 b1 100)
-      (.background pG h2 s2 b2 100))
+      (.background pG h1 s1 b1 40)
+      (.background pG h2 s2 b2 40))
     )
 
   (.setAlwaysOnTop (.-frame this) true)
@@ -362,16 +404,25 @@
       )
     )
 
+  (defn drawToneShape [sounds cc]
+    (tone-shape/draw this pG sounds cc 1)
+    (push-pop pG
+              (.translate pG 150 0 0)
+              (.rotateY pG PApplet/HALF_PI)
+              (tone-shape/draw this pG sounds cc 2)
+              )
+    )
+
   (let [cc (deref cc)
         sounds (deref sounds)
-        a (int (first (get cc "/cc/27")))
-        b (int (first (get cc "/cc/28")))
-        c (int (first (get cc "/cc/29")))
-        d (int (first (get cc "/cc/30")))
-        e (int (first (get cc "/cc/31")))
-        f (int (first (get cc "/cc/32")))]
+        a (int (getCC 27))                                  ;radio buttons
+        b (int (getCC 28))
+        c (int (getCC 29))
+        d (int (getCC 30))
+        e (int (getCC 31))
+        f (int (getCC 32))]
     (if (= a 127)
-      (tone-shape/draw this pG sounds cc)
+      (drawToneShape sounds cc)
       (if (= b 127)
         (drawStackOfRings pG this sounds cc)
         (if (= c 127)
