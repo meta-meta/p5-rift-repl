@@ -157,7 +157,6 @@
 
   (defn stacky [n t radii]
     (.colorMode pG PApplet/HSB)
-    (.blendMode pG PApplet/ADD)
 
     (defn drawSphere [x y hue bright]
 
@@ -180,13 +179,13 @@
             brights (map
                       (fn [a]
                         (* 25500
-                           (last (getSine track (+ 1 a)))))
+                           (last (getSine (+ 1 a)))))
                       (range 0 n))
             hues (map
                    (fn [a]
                      (mod (*
                             0.5
-                            (first (getSine track (+ 1 a))))
+                            (first (getSine (+ 1 a))))
                           255))
                    (range 0 n))]
         (doall (map drawSphere xs zs hues brights))
@@ -211,7 +210,9 @@
 
   )
 
-(def l (EuclideanSpaceObject.))
+
+
+
 
 (defn drawTvNoise [pG track]
   (defn getProp [propName]
@@ -222,7 +223,7 @@
   (.camera pG)
   (.perspective pG)
 
-  (let [size (+ 10 (* 2 (getCC 79)))]
+  (let [size (+ 20 (* 5 (getCC 79)))]
 
     (doall (for [x (range 0 (.-width pG) size)
                  y (range 0 (.-height pG) size)
@@ -236,6 +237,11 @@
                       0
                       (rand 255)
                       (* 2 (getCC 78)))
+               (.stroke pG
+                      255
+                      0
+                      (rand 255)
+                      (* 2 (getCC 78)))
                (.rect pG
                       x y
                       size size)
@@ -244,6 +250,11 @@
 
   (.hint pG PApplet/ENABLE_DEPTH_MASK)
   )
+
+
+
+
+(def l (EuclideanSpaceObject.))
 
 (defn drawStem [pG p5 track]
 
@@ -389,9 +400,21 @@
   (spaceNavSettings spaceNav)
 
 
-  ;(.blendMode pG PApplet/BURN)
-  (.blendMode pG PApplet/ADD)
-  ;(.blendMode pG PApplet/BLEND)
+
+  (let [modwheel (getCC 1)
+        region (/ 127 4)]
+    (cond
+      (< modwheel region)
+      (.blendMode pG PApplet/DARKEST)
+      (< modwheel (* 2 region))
+      (.blendMode pG PApplet/BLEND)
+      (< modwheel (* 3 region))
+      (.blendMode pG PApplet/SCREEN)
+      (< modwheel (* 4 region))
+      (.blendMode pG PApplet/ADD)
+      )
+    )
+
 
   (.colorMode pG PApplet/HSB)
 
@@ -444,26 +467,32 @@
               )
     )
 
-  (let [cc (deref cc)
-        sounds (deref sounds)
-        a (int (getCC 27))                                  ;radio buttons
-        b (int (getCC 28))
-        c (int (getCC 29))
-        d (int (getCC 30))
-        e (int (getCC 31))
-        f (int (getCC 32))]
-    (if (= a 127)
-      (drawToneShape sounds cc)
-      (if (= b 127)
-        (drawStackOfRings pG this sounds cc)
-        (if (= c 127)
-          (drawStem pG this)
+  (if (= {} (deref sounds))
+    (if (= 0 (mod (.-frameCount this) 10)) (println "oo"))
+    (do
+      (let [cc (deref cc)
+            sounds (deref sounds)
+            a (int (getCC 27))                                  ;radio buttons
+            b (int (getCC 28))
+            c (int (getCC 29))
+            d (int (getCC 30))
+            e (int (getCC 31))
+            f (int (getCC 32))]
+        (if (= a 127)
+          (drawToneShape sounds cc)
+          (if (= b 127)
+            (drawStackOfRings pG this sounds cc 1)
+            (if (= c 127)
+              (drawStem pG this)
+              )
+            )
           )
         )
+
+      (drawTvNoise pG (+ 1 mon))
       )
     )
 
-  (drawTvNoise pG (+ 1 mon))
 
   ;(tone-shape/draw this pG (deref sounds) (deref cc))
   ;(music_staff/drawme this pG (deref sounds))
