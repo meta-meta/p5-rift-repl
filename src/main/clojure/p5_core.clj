@@ -22,12 +22,30 @@
   (list 'do '(.pushMatrix pG) (cons 'do body) '(.popMatrix pG))
   )
 
-(defn resetCam []
+(defn setCam []
   (def camMount (EuclideanSpaceObject.))
   (def cam [(Camera.) (Camera.)])
-  (.addChild camMount (first cam))
-  (.addChild camMount (last cam) (YawPitchRoll. PApplet/QUARTER_PI 0 0)))
-(resetCam)
+  (.addChild camMount (first cam) (PVector. 0 0 -10))
+  (.addChild camMount (last cam) (PVector. -10 0 0) (YawPitchRoll. PApplet/HALF_PI 0 0)))
+(setCam)
+
+
+(defn resetCam [camNum]
+  (let [cam (nth cam camNum)]
+    (.setLocation cam 0 0 0)
+    (.setOrientation cam (YawPitchRoll.))
+    ))
+
+(defn resetCams []
+  (resetCam 0)
+  (resetCam 1)
+  (.adjustChildren camMount)
+  )
+
+(defn resetCamMount []
+  (.setLocation camMount 0 0 0)
+  (.setOrientation camMount (YawPitchRoll.))
+  )
 
 
 
@@ -76,15 +94,19 @@
                                  {address (.getArguments msg)}))
                        ))))
 
-(doall (map addListener
-            (flatten (map (fn [i]
-                            (map (fn [a] (str "/" i a))
-                                 (flatten ["/loudness" "/brightness" "/noisiness" "/bark" "/peaks" "/pitch"
-                                           (map (fn [i] (str "/sines/" i)) (range 1 21))])))
-                          (range 0 8)
-                          ))
-            (repeat sounds)
-            ))
+(let [soundAddrs (flatten (map (fn [i]
+                                 (map (fn [a] (str "/" i a))
+                                      (flatten ["/loudness" "/brightness" "/noisiness" "/bark" "/peaks" "/pitch"
+                                                (map (fn [i] (str "/sines/" i)) (range 1 21))])))
+                               (range 1 9)
+                               ))]
+  (setref sounds (zipmap soundAddrs (repeat '(0 0))))
+
+  (doall (map addListener
+              soundAddrs (repeat sounds)))
+  )
+
+
 
 (doall (map addListener ccKeys (repeat cc)))
 
@@ -95,50 +117,111 @@
 
 
 ;TODO: move this and others like it to another file
-(defn nice-orb [this pG]
-  (.blendMode pG PApplet/ADD)
+(defn nice-orb [pG p5 sounds cc]
+  (defn getProp [track propName]
+    (first (get sounds (str "/" track "/" propName))))
+
+  (defn getSine [track n]
+    (get sounds (str "/" track "/sines/" n)))
+
+  (let [h (* 2 (getCC 82))]
+    (.noFill pG)
+    (.sphereDetail pG (getCC 80))
+    (.strokeWeight pG (* 0.4 (getCC 81)))
 
 
-  (.noFill pG)
-  (.sphereDetail pG 50)
-
-  (.stroke pG 100 50 0 100)
-  (.strokeWeight pG 5)
-
-
-  (push-pop pG
-
-            (let [r (mod (/ (.millis this) 2000) PApplet/TWO_PI)]
-              (.rotateY pG r)
-              )
-            (if (> 0.3 (rand)) (.sphere pG 0.6)))
-
-
-  (.stroke pG 0 50 100 100)
-
-
-  (push-pop pG
-    (let [r (mod (/ (.millis this) 3000) PApplet/TWO_PI)]
-      (.rotateX pG r)
+    (defn hue [in]
+      (mod (+ in h) 255)
       )
 
-    (if (> 0.2 (rand)) (.sphere pG 0.7)))
+    (push-pop pG
+              (.rotateY pG (mod (/ (.millis p5) 2000) PApplet/TWO_PI))
+              (.stroke pG
+                       (hue 255)
+                       0
+                       255
+                       (* 0.005 (getProp 6 "brightness")))
+              (.sphere pG 60))
 
-  (.stroke pG 50 100 50 100)
 
-  (push-pop pG
-            (let [r (mod (/ (.millis this) 5000) PApplet/TWO_PI)]
-              (.rotateZ pG r)
+    (push-pop pG
+              (.rotateX pG (mod (/ (.millis p5) 3000) PApplet/TWO_PI))
+              (.stroke pG
+                       (hue 0)
+                       255
+                       255
+                       (* 500 (- (getProp 6 "noisiness") 0.7)))
+              (.sphere pG 80))
+
+
+
+    (push-pop pG
+              (.rotateZ pG (mod (/ (.millis p5) 5000) PApplet/TWO_PI))
+              (.stroke pG
+                       (hue 70)
+                       255
+                       200
+                       60)
+              (.sphere pG 100)
+
+              (let [
+                    
+                    s1 (getSine 2 1)
+                    s1Freq (first s1)
+                    s1Amp (last s1)
+
+                    s2 (getSine 2 2)
+                    s2Freq (first s2)
+                    s2Amp (last s2)
+                    
+                    ]
+
+                (.stroke pG (mod (* 255 s1Amp) 255) 255 255)
+                (.strokeWeight pG (* 10 s1Amp))
+                (.line pG
+                       (* 80 (Math/sin s1Freq))
+                       (* 80 (Math/cos s1Freq))
+                       (* 80 (Math/cos s1Amp))
+                       (* 100 (Math/sin s1Freq))
+                       (* 100 (Math/cos s1Freq))
+                       100)
+
+                (.stroke pG (mod (* 255 s2Amp) 255) 255 255)
+                (.strokeWeight pG (* 10 s2Amp))
+                (.line pG
+                       (* 80 (Math/sin s2Freq))
+                       (* 80 (Math/cos s2Freq))
+                       (* 80 (Math/cos s2Amp))
+                       (* 100 (Math/sin s2Freq))
+                       (* 100 (Math/cos s2Freq))
+                       100)
+                
+                )
+              
               )
-            (.sphere pG 0.8))
 
-  (.stroke pG 244 255 255 50)
+    (push-pop pG
+              (.rotateX pG (mod (/ (.millis p5) 1100) PApplet/TWO_PI))
+              (.stroke pG
+                       (hue 180)
+                       255
+                       150
+                       60)
+              (.sphere pG 300)
 
-  (push-pop pG
-            (let [r (mod (/ (.millis this) 1100) PApplet/TWO_PI)]
-              (.rotateX pG r)
-              )
-            (.sphere pG 0.8))
+
+
+              
+
+              ))
+  ;
+  ;(.stroke pG 244 255 255 100)
+  ;
+  ;(push-pop pG
+  ;          (let [r (mod (/ (.millis p5) 1100) PApplet/TWO_PI)]
+  ;            (.rotateX pG r)
+  ;            )
+  ;          (.sphere pG 80))
   )
 
 
@@ -206,7 +289,7 @@
     (doall (map drawCircle (range 0 n) (repeat t) radii))
     )
 
-  (stacky 10 1 (range 90 1000 0.2))
+  (stacky 10 5 (range 500 1000 0.2))
 
   )
 
@@ -223,7 +306,7 @@
   (.camera pG)
   (.perspective pG)
 
-  (let [size (+ 20 (* 5 (getCC 79)))]
+  (let [size (+ 20 (* 10 (getCC 79)))]
 
     (doall (for [x (range 0 (.-width pG) size)
                  y (range 0 (.-height pG) size)
@@ -259,13 +342,13 @@
 (defn drawStem [pG p5 track]
 
   (defn getProp [propName]
-    (first (get sounds (str "/" track "/" propName))))
+    (first (get (deref sounds) (str "/" track "/" propName))))
 
   (defn getPitch []
-    (first (get sounds (str "/" track "/pitch"))))
+    (first (get (deref sounds) (str "/" track "/pitch"))))
 
   (defn getSine [n]
-    (get sounds (str "/" track "/sines/" n)))
+    (get (deref sounds) (str "/" track "/sines/" n)))
 
   (defn cylinder [r1 r2 h sides]
     (.beginShape pG PApplet/QUAD_STRIP)
@@ -302,63 +385,97 @@
             (let [x (.x l) y (.y l) z (.z l)]
               (.translate pG x y z))
 
-            ; light
-            (.lightFalloff pG 0.1 0.1 0.0001)
-            (.colorMode pG PApplet/RGB)
-            (.pointLight pG 255 255 255 3 0 0)
+            (let [loud (* 2 (+ 100 (getProp "loudness")))]
+              ; light
+              (.lightFalloff pG 0.1 0.1 0.001)
+              (.colorMode pG PApplet/RGB)
+              (.pointLight pG
+                           255
+                           loud
+                           255 3 0 0)
 
-            ; bulb
-            (.noStroke pG)
-            (.emissive pG 255)
-            (.sphere pG 0.2)
-            (.emissive pG 0))
+              ; bulb
+              (.noStroke pG)
+              (.emissive pG 255)
+              (.fill pG loud loud loud loud)
+
+              (.sphere pG 0.2)
+              (.emissive pG 0)
+
+              (.ambientLight pG 250 loud loud 0 0 0))
+            )
 
 
-  (.ambientLight pG 250 255 255 0 0 0 )
+
+
+
   (.colorMode pG PApplet/HSB)
-  (.blendMode pG PApplet/BLEND)
+  ;(.blendMode pG PApplet/BLEND)
 
 
-  (.beginShape pG)                                          ;FLOOR
-  (.emissive pG (.color p5 20 0 0))
-  (.vertex pG -1000 0 -1000)
-  (.emissive pG (.color p5 50 0 0))
-  (.vertex pG -1000 0 1000)
-  (.emissive pG (.color p5 0 50 0))
-  (.vertex pG 1000 0 1000)
-  (.emissive pG (.color p5 50 50 0))
-  (.vertex pG 1000 0 -1000)
-  (.endShape pG)
-  (.emissive pG 0)
+  ;(.beginShape pG)                                          ;FLOOR
+  ;(.emissive pG (.color p5 20 0 0))
+  ;(.vertex pG -1000 0 -1000)
+  ;(.emissive pG (.color p5 50 0 0))
+  ;(.vertex pG -1000 0 1000)
+  ;(.emissive pG (.color p5 0 50 0))
+  ;(.vertex pG 1000 0 1000)
+  ;(.emissive pG (.color p5 50 50 0))
+  ;(.vertex pG 1000 0 -1000)
+  ;(.endShape pG)
+  ;(.emissive pG 0)
 
 
   (.stroke pG 50 255 0)
   (.strokeWeight pG 0.5)
 
 
-  (defn fib [a b] (cons a (lazy-seq (fib b (+ b a)))))      ;MUSHROOM
-  (.fill pG 225 50 100)
-  (stem 20 (repeat 3) 30 (fib 1 1))
+
+
+
+  (defn mushroom []
+    (defn fib [a b] (cons a (lazy-seq (fib b (+ b a)))))      ;MUSHROOM
+    (.fill pG 225 50 100 50)
+    (stem 10 (repeat 3) 10 (fib 1 1))
+    )
+
+  (mushroom)
+
+  (push-pop pG
+            (.scale pG 1 -1 1)
+            (mushroom))
 
   ;green
   (.fill pG 100 255 100)
 
-  (push-pop pG                                              ;FERN
-            (.translate pG 20 0 0)
-            (let [bright (getProp track "brightness")]
-              ;(println bright)
-              (stem 30
-                    (range 2 0 -0.05)
-                    3
-                    (range 3 0.001 -0.1)
-                    (range 0 1000 (+ 0.02 (* 0.000005 bright)))
-                    (repeat 0))))
+  (defn fern []
+    (push-pop pG                                              ;FERN
+              (.translate pG 20 0 0)
+              (let [bright (getProp "brightness")]
+                ;(println bright)
+                (stem 30
+                      (range 2 0 -0.05)
+                      3
+                      (range 3 0.001 -0.1)
+                      (range 0 1000 (+ 0.02 (* 0.000009 bright)))
+                      (repeat 0))))
+    )
 
-  (push-pop pG                                              ;PULSEY
-            (.translate pG 0 0 20)
-            (let [noiz (getProp track "noisiness")]
-              (stem 10 (repeat 3) 3 (repeatedly #(+ 1 (rand (* 2 noiz)))))))
+  (fern)
+  (push-pop pG
+            (.scale pG 1 -1 1)
+            (fern))
 
+  (defn pulsey []
+    (push-pop pG                                              ;PULSEY
+              (.translate pG 0 0 20)
+              (let [noiz (getProp "noisiness")]
+                (stem 10 (repeat 3) 3 (repeatedly #(+ 1 (rand (* 2 noiz)))))))
+    )
+  (pulsey)
+  (push-pop pG
+            (.scale pG 1 -1 1)
+            (pulsey))
   )
 
 (defn doSpaceNav [spaceNav obj]
@@ -395,12 +512,17 @@
   )
 
 (defn p5-drawReplView [this pG mon spaceNav keys scroll]
+  (.setAlwaysOnTop (.-frame this) true)
+  ;(.noCursor this)
+  ;(.cursor this PApplet/ARROW)
+
+  ;; CAMERA
   (set! (.-fov (nth cam mon)) (Math/max 0.001 (* (* scroll 0.01) 1.12)))
   (.camera (nth cam mon) pG)
   (spaceNavSettings spaceNav)
 
 
-
+  ;; BLEND AND COLORS
   (let [modwheel (getCC 1)
         region (/ 127 4)]
     (cond
@@ -415,48 +537,43 @@
       )
     )
 
-
   (.colorMode pG PApplet/HSB)
 
-  (let [h1 (int (* 2 (getCC 87 )))
-        s1 (int (* 2 (getCC 106)))
-        b1 (int (* 2 (getCC 114)))
-        h2 (int (* 2 (getCC 88 )))
-        s2 (int (* 2 (getCC 107)))
-        b2 (int (* 2 (getCC 115)))]
-    (if (= mon 0)
-      (.background pG h1 s1 b1 40)
-      (.background pG h2 s2 b2 40))
-    )
+  ;; BACKGROUND
+  (if (= mon 0)
+    (.background pG
+                 (* 2 (getCC 87 ))
+                 (* 2 (getCC 106 ))
+                 (* 2 (getCC 114 ))
+                 (- 255 (* 2 (getCC 83))))
+    (.background pG
+                 (* 2 (getCC 88 ))
+                 (* 2 (getCC 107 ))
+                 (* 2 (getCC 115 ))
+                 (- 255 (* 2 (getCC 83)))))
 
-  (.setAlwaysOnTop (.-frame this) true)
-  ;(.noCursor this)
-  ;(.cursor this PApplet/ARROW)
 
+
+  ;; KEYBOARD
   (if (get keys (Integer. 38))
     (println scroll))
 
 
-  ;(push-pop pG
-  ;          (.translate pG 0 -5 20)
-  ;          (.box pG 1)
-  ;
-  ;          (push-pop pG
-  ;                    (.translate pG 3 2 10)
-  ;                    (.box pG 2))
-  ;          )
-
   ;(println keys)
-  (if (get keys (Integer. 32))  ;spacebar
+  (cond
+    (get keys (Integer. 32))
     (doRelativeSpaceNav spaceNav l camMount)
-    (if (get keys (Integer. 37))
-      (doSpaceNav spaceNav (nth cam 0))
-      (if (get keys (Integer. 39))
-        (doSpaceNav spaceNav (nth cam 1))
-        (doSpaceNav spaceNav camMount)
-        )
-      )
+
+    (get keys (Integer. 37))
+    (doSpaceNav spaceNav (nth cam 0))
+
+    (get keys (Integer. 39))
+    (doSpaceNav spaceNav (nth cam 1))
+
+    true
+    (doSpaceNav spaceNav camMount)
     )
+
 
   (defn drawToneShape [sounds cc]
     (tone-shape/draw this pG sounds cc 1)
@@ -467,31 +584,112 @@
               )
     )
 
-  (if (= {} (deref sounds))
-    (if (= 0 (mod (.-frameCount this) 10)) (println "oo"))
-    (do
-      (let [cc (deref cc)
-            sounds (deref sounds)
-            a (int (getCC 27))                                  ;radio buttons
-            b (int (getCC 28))
-            c (int (getCC 29))
-            d (int (getCC 30))
-            e (int (getCC 31))
-            f (int (getCC 32))]
-        (if (= a 127)
-          (drawToneShape sounds cc)
-          (if (= b 127)
-            (drawStackOfRings pG this sounds cc 1)
-            (if (= c 127)
-              (drawStem pG this)
-              )
-            )
-          )
-        )
 
-      (drawTvNoise pG (+ 1 mon))
+
+  (let [cc (deref cc)
+        sounds (deref sounds)]
+
+    (cond
+      (= 127 (getCC 27))
+      (drawToneShape sounds cc)
+
+      (= 127 (getCC 28))
+      (drawStackOfRings pG this sounds cc 2)
+
+      (= 127 (getCC 29))
+      (nice-orb pG this sounds cc)
+
+      (= 127 (getCC 30))
+      (drawStem pG this (+ 1 mon))
+
+      )
+
+    )
+
+  (if (= 127 (getCC 38))
+    (drawTvNoise pG (+ 1 mon)))
+
+
+  (defn drawPitches [sounds]
+    (defn getProp [track propName]
+      (first (get sounds (str "/" track "/" propName))))
+
+    (let [pitch (getProp 4 "pitch")]
+      (.hint pG PApplet/DISABLE_DEPTH_MASK)
+      (.camera pG)
+      (.perspective pG)
+
+      ;(.background pG 255)
+      (.fill pG
+             (mod (+ (* 127 mon) (* 2 (getCC 89))) 255)
+             (* 2 (getCC 108))
+             (* 2 (getCC 116)))
+
+      (.stroke pG 255)
+      (.rect pG
+             (mod (- (* mon (.-width pG)) (* 100 (- pitch 60))) (.-width pG))
+             0
+             100
+             (.-height pG))
+
+      ;(push-pop pG
+      ;
+      ;          )
+
+      (.hint pG PApplet/ENABLE_DEPTH_MASK)
       )
     )
+
+  (defn drawMoog [sounds]
+    (defn getProp [track propName]
+      (first (get sounds (str "/" track "/" propName))))
+
+    (let [pitch (getProp 3 "pitch")
+          loudness (* 1 (+ 100 (getProp 3 "loudness")))
+          noisiness (getProp 3 "noisiness")
+          ]
+      (.hint pG PApplet/DISABLE_DEPTH_MASK)
+      (.camera pG)
+      (.perspective pG)
+
+      (.fill pG
+             (mod (+ (* 127 mon) (* 2 (getCC 90))) 255)
+             (* 2 (getCC 109))
+             (* 2 (getCC 117))
+             50
+             )
+
+      (.sphereDetail pG (- 30 (* 30 noisiness)))
+      (.strokeWeight pG (- 10 (* 10 noisiness)))
+
+      ;(.noStroke pG)
+      (.stroke pG
+               (mod (+ (* 127 mon) (* 2 (getCC 90))) 255)
+               (* 2 (getCC 109))
+               (* 2 (getCC 117))
+               100)
+      (push-pop pG
+                (.translate pG
+                  (mod (* 30 pitch) (.-width pG))
+                  (* 0.5 (.-height pG))
+                  0)
+
+                (.rotateY pG (* 0.001 (.millis this)))
+
+                (.sphere pG 200)
+
+                )
+
+      (.hint pG PApplet/ENABLE_DEPTH_MASK)
+      )
+    )
+
+  (if (= 127 (getCC 31))
+    (drawPitches (deref sounds)))
+
+  (if (= 127 (getCC 32))
+    (drawMoog (deref sounds)))
+
 
 
   ;(tone-shape/draw this pG (deref sounds) (deref cc))

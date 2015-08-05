@@ -68,14 +68,14 @@
                                       rz (- (rand (* 2 l)) l)
                                       ]
                                   (.stroke pG (+ sh (- (rand 90) 45)) ss sb (rand 100))
-                                  (.strokeWeight pG (rand (* 0.1 s)))
+                                  (.strokeWeight pG (rand (* 0.4 s)))
                                   (.line pG 0 0 0 rx ry rz)
                                   )
 
                                 ;meters
-                                (.strokeWeight pG 0.1)
+                                (.strokeWeight pG 0.05)
                                 (.stroke pG 20 255 255 (+ 100 (* 150 (last sine))))
-                                (.scale pG 150 200 50)
+                                (.scale pG 50 50 50)
                                 (.sphereDetail pG 4)
                                 (.sphere pG 0.1)
                                 (.popMatrix pG))

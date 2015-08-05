@@ -22,18 +22,26 @@ public class P5ReplDualMon extends PApplet {
 
     @Override
     public void setup() {
-        //TODO: this forces the two monitors to be same res. flexibility would be nice
-        for (int i = 0; i < 2; i++) {
-            pGs[i] = createGraphics(width, height, P3D);
-        }
 
-        mon2 = new PFrame(width, height);
+//        size(1920, 1080, P3D);
+//        frame.setUndecorated(true);
+//        frame.setBounds(1920, 0, 1920, 1080);
+
+//        setLocation(1920, 0);
+
+        pGs[1] = createGraphics(width, height, P3D);
+
+        pGs[0] = createGraphics(1024, 768, P3D);
+        mon2 = new PFrame(1024, 768);
 
         spaceNav = new SpaceNavMomentum(this);
         noCursor();
 
         scroll[0] = 100;
         scroll[1] = 100;
+
+        keys.put(37, false);
+        keys.put(39, false);
     }
 
     @Override
@@ -59,10 +67,26 @@ public class P5ReplDualMon extends PApplet {
         }
 
 
-        image(pGs[0], 0, 0);
+        image(pGs[1], 0, 0);
 
-        applet2.image(pGs[1].get(), 0, 0, applet2.w, applet2.h);
+        applet2.image(pGs[0].get(), 0, 0, applet2.w, applet2.h);
         applet2.redraw();
+    }
+
+    private void setScroll(int amt) {
+        if(keys.get(37)) {
+            scroll[0] -= amt;
+        } else if(keys.get(39)) {
+            scroll[1] -= amt;
+        }
+    }
+
+    private void resetScroll() {
+        if(keys.get(37)) {
+            scroll[0] = 100;
+        } else if(keys.get(39)) {
+            scroll[1] = 100;
+        }
     }
 
     boolean err;
@@ -74,7 +98,7 @@ public class P5ReplDualMon extends PApplet {
         public PFrame(int w, int h) {
             this.w = w;
             this.h = h;
-            setBounds(2970, 0, w, h); //TODO: this should come from an arg
+            setBounds(896, -768, w, h); //TODO: this should come from an arg
             setUndecorated(true);
             setAlwaysOnTop(true);
             applet2 = new SecondApplet(w, h);
@@ -101,7 +125,7 @@ public class P5ReplDualMon extends PApplet {
         @Override
         public void mouseWheel(MouseEvent event) {
             super.mouseWheel(event);
-            scroll[1] -= event.getCount();
+            setScroll(event.getCount());
         }
 
         @Override
@@ -109,7 +133,7 @@ public class P5ReplDualMon extends PApplet {
         {
             // reset scroll on F
             if(e.getKeyCode() == 70) {
-                scroll[1] = 100;
+                resetScroll();
             }
 
             keys.put(e.getKeyCode(), true);
@@ -125,7 +149,7 @@ public class P5ReplDualMon extends PApplet {
     @Override
     public void mouseWheel(MouseEvent event) {
         super.mouseWheel(event);
-        scroll[0] -= event.getCount();
+        setScroll(event.getCount());
     }
 
     @Override
@@ -133,7 +157,7 @@ public class P5ReplDualMon extends PApplet {
     {
         // reset scroll on F
         if(e.getKeyCode() == 70) {
-            scroll[0] = 100;
+            resetScroll();
         }
 
         keys.put(e.getKeyCode(), true);
