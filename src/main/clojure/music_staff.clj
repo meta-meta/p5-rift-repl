@@ -6,15 +6,79 @@
 (import processing.core.PApplet)
 (import com.generalprocessingunit.processing.music.MusicalFontConstants)
 
-(def p5 (ref nil))
+(def p5 (atom nil))
 
 
-(defrecord Event [type duration])
+(defrecord Measure [beats-per-measure length-of-beat phrases])
+(defrecord Phrase [events])
+(defrecord Event [type beats notes])
 
+
+(def measures (Measure. 4 1/4 [(Phrase. [
+                                         (Event. :note 1/2 [1 2 3 4])
+                                         (Event. :note 1/2 [2 4 5])
+                                         ])
+                               (Phrase. [
+                                         (Event. :note 1 [0])
+                                         (Event. :rest 1 [])
+                                         ])
+                               ]))
+
+
+(defn glyph-note [beats]
+  (cond
+    (= beats 1)
+    MusicalFontConstants/NOTE_WHOLE
+    (= beats 1/2)
+    MusicalFontConstants/NOTE_HALF_UP
+    (= beats 1/4)
+    MusicalFontConstants/NOTE_QUARTER_UP
+    (= beats 1/8)
+    MusicalFontConstants/NOTE_EIGHTH_UP
+    (= beats 1/16)
+    MusicalFontConstants/NOTE_16TH_UP
+    (= beats 1/32)
+    MusicalFontConstants/NOTE_32ND_UP
+    )
+  )
+
+(defn glyph-rest [beats]
+  (cond
+    (= beats 1)
+    MusicalFontConstants/REST_WHOLE
+    (= beats 1/2)
+    MusicalFontConstants/REST_HALF
+    (= beats 1/4)
+    MusicalFontConstants/REST_QUARTER
+    (= beats 1/8)
+    MusicalFontConstants/REST_EIGTH
+    (= beats 1/16)
+    MusicalFontConstants/REST_16TH
+    (= beats 1/32)
+    MusicalFontConstants/REST_32ND
+    )
+  )
+
+
+; Measure Queue
+(def queue (atom (clojure.lang.PersistentQueue/EMPTY)))
+(def millis-at-play (atom 0))
+
+(defn add-measure [measure]
+  (if (nil? (peek @queue))
+    (swap! millis-at-play (fn [x] (.millis @p5))))
+  (swap! queue conj measure))
+
+(defn next-measure []
+  (let [ret (peek @queue)]
+    (swap! queue pop)
+    ret
+    )
+  )
 
 
 (defn setup [this]
-  (dosync (ref-set p5 this))
+  (swap! p5 (constantly this))
 
   ;TODO Bravura.otf needs to be copied to the classpath  build/classes/main works
   (def bravura (.createFont this "Bravura.otf" 100 true MusicalFontConstants/charset))
@@ -22,8 +86,6 @@
 
 
 (defn drawme [this pG sounds]
-
-
 
   (.background pG 60 50 100)
 
@@ -62,7 +124,7 @@
         depth 25
         staff-z-fn (fn [x]
                         (* depth (Math/sin (+ -0.5 PApplet/PI PApplet/HALF_PI (* 0.1 x)))))
-        segments (range 0 60)
+        segments (range 0 50)
         alphas (range 255 0 -5)
         ]
 
@@ -96,11 +158,36 @@
 
     (.hint pG PApplet/DISABLE_DEPTH_MASK)
 
-    (d-event 5.5 3 MusicalFontConstants/FLAT)
-    (d-event 6 1 MusicalFontConstants/NOTE_QUARTER_UP)
-    (d-event 6 2 MusicalFontConstants/NOTE_QUARTER_UP)
-    (d-event 6 3 MusicalFontConstants/NOTE_QUARTER_UP)
-    (d-event 20 0 MusicalFontConstants/SHARP)
+    (defn draw-measure [measure]
+      (doall (map
+               (fn [phrase]
+                 (reduce
+                   (fn [curr-beat event]
+                     (cond
+                       (= :note (:type event))
+                       (doall (map
+                                (fn [n] (d-event
+                                          (+ 10 curr-beat)
+                                          n
+                                          (glyph-note (:beats event))))
+                                (:notes event)))
+
+                       (= :rest (:type event))
+                       (d-event
+                         (+ 10 curr-beat)
+                         2
+                         (glyph-rest (:beats event)))
+                       )
+
+                     (+ curr-beat (/ (:beats event) (:length-of-beat measure)))
+                     )
+                   0
+                   (:events phrase))
+                 )
+               (:phrases measure)))
+      )
+
+    (draw-measure measures)
 
 
     (.hint pG PApplet/ENABLE_DEPTH_MASK)
