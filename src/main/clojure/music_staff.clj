@@ -42,12 +42,14 @@
 (def octatonic (Scale. :octatonic [1 2 1 2 1 2 1 2]))
 
 ;; todo: add this to protocol covering intervalSeq and scales
-(defn scale-to-note-seq )
+(defn scale-to-note-seq [scale starting-note]
+  (->> (range (count (:seq scale)))
+       (map #(reduce + starting-note (take % (:seq scale))))))
 
 (defn key-from-scale [scale tonic]
   (Key.
     (:name scale)
-    (->> (:seq scale)
+    (->> (scale-to-note-seq scale tonic)
          (map #(mod % 12)))
     tonic
     )
