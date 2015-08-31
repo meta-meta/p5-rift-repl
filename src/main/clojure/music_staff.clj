@@ -9,6 +9,52 @@
 (def p5 (atom nil))
 
 
+(def names {
+            :chromatic "Chromatic"
+            :diatonic "Diatonic"
+            :pentatonic "Pentatonic"
+            :whole-tone "Whole Tone"
+            :octatonic "Octatonic"
+            })
+
+;; NoteSequence is a vector of MIDI note numbers
+(defrecord NoteSequence [name seq])
+
+;; IntervalSequence is a vector of intervals
+(defrecord IntervalSequence [name seq])
+
+;; Scale is an ascending interval sequence guaranteed to span exactly an octave
+(defrecord Scale [name seq])
+(with-meta ->Scale {:doc "howdy"})
+
+;; Key is a set of pitch-classes and a tonic
+(defrecord Key [name pitch-classes tonic])
+
+
+(def all-notes (set (range 0 128)))
+(def ewi-notes (sorted-set (range 34 100)))
+
+(def chromatic (Scale. :chromatic (range)))
+
+(def diatonic (Scale. :diatonic [2 2 1 2 2 2 1]))
+(def pentatonic (Scale. :pentatonic [3 2 3 2 2]))
+(def whole-tone (Scale. :whole-tone [2 2 2 2 2 2]))
+(def octatonic (Scale. :octatonic [1 2 1 2 1 2 1 2]))
+
+;; todo: add this to protocol covering intervalSeq and scales
+(defn scale-to-note-seq )
+
+(defn key-from-scale [scale tonic]
+  (Key.
+    (:name scale)
+    (->> (:seq scale)
+         (map #(mod % 12)))
+    tonic
+    )
+  )
+
+(def key-of-c (key-from-scale diatonic 0))
+
 (defrecord Measure [beats-per-measure length-of-beat phrases])
 (defrecord Phrase [events])
 (defrecord Event [type beats notes])
@@ -26,38 +72,37 @@
 
 
 (defn glyph-note [beats]
-  (cond
-    (= beats 1)
-    MusicalFontConstants/NOTE_WHOLE
-    (= beats 1/2)
-    MusicalFontConstants/NOTE_HALF_UP
-    (= beats 1/4)
-    MusicalFontConstants/NOTE_QUARTER_UP
-    (= beats 1/8)
-    MusicalFontConstants/NOTE_EIGHTH_UP
-    (= beats 1/16)
-    MusicalFontConstants/NOTE_16TH_UP
-    (= beats 1/32)
-    MusicalFontConstants/NOTE_32ND_UP
+  (case beats
+    1 MusicalFontConstants/NOTE_WHOLE
+    1/2 MusicalFontConstants/NOTE_HALF_UP
+    1/4 MusicalFontConstants/NOTE_QUARTER_UP
+    1/8 MusicalFontConstants/NOTE_EIGHTH_UP
+    1/16 MusicalFontConstants/NOTE_16TH_UP
+    1/32 MusicalFontConstants/NOTE_32ND_UP
     )
   )
 
 (defn glyph-rest [beats]
-  (cond
-    (= beats 1)
-    MusicalFontConstants/REST_WHOLE
-    (= beats 1/2)
-    MusicalFontConstants/REST_HALF
-    (= beats 1/4)
-    MusicalFontConstants/REST_QUARTER
-    (= beats 1/8)
-    MusicalFontConstants/REST_EIGTH
-    (= beats 1/16)
-    MusicalFontConstants/REST_16TH
-    (= beats 1/32)
-    MusicalFontConstants/REST_32ND
+  (case beats
+    1 MusicalFontConstants/REST_WHOLE
+    1/2 MusicalFontConstants/REST_HALF
+    1/4 MusicalFontConstants/REST_QUARTER
+    1/8 MusicalFontConstants/REST_EIGTH
+    1/16 MusicalFontConstants/REST_16TH
+    1/32 MusicalFontConstants/REST_32ND
     )
   )
+
+(def note-letters [:a :b :c :d :e :f :g])
+
+(defrecord Clef [glyph glyph-position lowest-note])
+(def g-clef (Clef. MusicalFontConstants/G_CLEF 2 64))       ;E4
+(def f-clef (Clef. MusicalFontConstants/F_CLEF 6 43))       ;G2
+
+; translate from midi number to position on clef
+(defn midi-to-clef-position [note clef]
+  )
+
 
 
 ; Measure Queue
@@ -92,31 +137,34 @@
   (.stroke pG 0)
   (.strokeWeight pG 3)
 
-  ;(.scale pG 0.01 0.01)
-
   (defn d-glyph [glyph]
     (push-pop pG
-              (.textFont pG bravura 2.5)
+              (.textFont pG bravura 4.8)
               (.scale pG 1 -1)
               (.text pG glyph (float 0) (float 0))
               ))
+
+  (def seg-scale 2)
 
   (defn d-staff-seg [seg z1 z2 alpha]
     (defn d-stave-seg [staff-position]
       (.stroke pG 0 0 0 (int alpha))
       (.line pG
-             seg staff-position z1
-             (+ 1 seg) staff-position z2)
+             (* seg-scale seg)
+             staff-position
+             z1
+
+             (* seg-scale (+ 1 seg))
+             staff-position
+             z2)
       )
 
     ; draw the 5 staff lines
     (doall (map
              d-stave-seg
-             (range 0 5)
+             (range 0 10 2)
              ))
-
     )
-
 
 
   ; draw everything
@@ -133,7 +181,7 @@
       (push-pop pG
                 (let [alpha (nth alphas seg)]
                   (.translate pG
-                              seg
+                              (* seg-scale seg)
                               staff-position
                               (staff-z-fn seg))
                   (.fill pG 0 0 0 alpha))
