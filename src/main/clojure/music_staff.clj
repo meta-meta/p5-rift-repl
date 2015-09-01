@@ -30,17 +30,6 @@
 ;; Key is a set of pitch-classes and a tonic
 (defrecord Key [name pitch-classes tonic])
 
-
-(def all-notes (set (range 0 128)))
-(def ewi-notes (sorted-set (range 34 100)))
-
-(def chromatic (Scale. :chromatic (range)))
-
-(def diatonic (Scale. :diatonic [2 2 1 2 2 2 1]))
-(def pentatonic (Scale. :pentatonic [3 2 3 2 2]))
-(def whole-tone (Scale. :whole-tone [2 2 2 2 2 2]))
-(def octatonic (Scale. :octatonic [1 2 1 2 1 2 1 2]))
-
 ;; todo: add this to protocol covering intervalSeq and scales
 (defn scale-to-note-seq [scale starting-note]
   (->> (range (count (:seq scale)))
@@ -55,7 +44,36 @@
     )
   )
 
-(def key-of-c (key-from-scale diatonic 0))
+
+(def all-notes (set (range 0 128)))
+(def ewi-notes (set (range 34 100)))
+
+(def scales {
+             :chromatic (Scale. :chromatic (repeat 12 1))
+             :diatonic (Scale. :diatonic [2 2 1 2 2 2 1])
+             :pentatonic (Scale. :pentatonic [3 2 3 2 2])
+             :whole-tone (Scale. :whole-tone [2 2 2 2 2 2])
+             :octatonic (Scale. :octatonic [1 2 1 2 1 2 1 2])
+             })
+
+(def keys (zipmap
+            [:c :db :d :e :eb :f :f# :g :ab :a :b]
+            (map
+              (partial key-from-scale
+                       (:diatonic scales))
+              (range))))
+
+(def modes (let [names [:ionian :dorian :phrygian :lydian :mixolydian :aeolian :locrian]]
+             (zipmap
+               names
+               (map (fn [i name]
+                      (let [s (:seq (:diatonic scales))]
+                        (Scale. name
+                                (flatten (cons
+                                           (take-last (- (count s) i) s)
+                                           (take i s))))
+                        ))
+                    (range) names))))
 
 (defrecord Measure [beats-per-measure length-of-beat phrases])
 (defrecord Phrase [events])
