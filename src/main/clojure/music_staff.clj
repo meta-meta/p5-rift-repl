@@ -234,32 +234,34 @@
     (.hint pG PApplet/DISABLE_DEPTH_MASK)
 
     (defn draw-measure [measure]
-      (doall (map
-               (fn [phrase]
-                 (reduce
-                   (fn [curr-beat event]
-                     (cond
-                       (= :note (:type event))
-                       (doall (map
-                                (fn [n] (d-event
-                                          (+ 10 curr-beat)
-                                          n
-                                          (glyph-note (:beats event))))
-                                (:notes event)))
+      (doall (->> (:phrases measure)
+                  (map
+                    (fn [phrase]
+                      (->> (:events phrase)
+                           (reduce
+                             (fn [curr-beat event]
+                               (case (:type event)
+                                 :note (doall
+                                         (->> (:notes event)
+                                              (map
+                                                (fn [n] (d-event
+                                                          (+ 10 curr-beat)
+                                                          n
+                                                          (glyph-note (:beats event))))
+                                                )))
 
-                       (= :rest (:type event))
-                       (d-event
-                         (+ 10 curr-beat)
-                         2
-                         (glyph-rest (:beats event)))
-                       )
+                                 :rest (d-event
+                                         (+ 10 curr-beat)
+                                         2
+                                         (glyph-rest (:beats event)))
+                                 )
 
-                     (+ curr-beat (/ (:beats event) (:length-of-beat measure)))
-                     )
-                   0
-                   (:events phrase))
-                 )
-               (:phrases measure)))
+                               (+ curr-beat (/ (:beats event) (:length-of-beat measure)))
+                               )
+                             0
+                             ))
+                      )
+                    )))
       )
 
     (draw-measure measures)
