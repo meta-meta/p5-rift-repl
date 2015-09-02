@@ -26,7 +26,7 @@
   (def camMount (EuclideanSpaceObject.))
   (def cam [(Camera.) (Camera.)])
   (.addChild camMount (first cam) (PVector. 0 0 -10))
-  (.addChild camMount (last cam) (PVector. -10 0 0) (YawPitchRoll. PApplet/HALF_PI 0 0)))
+  (.addChild camMount (last cam) (PVector. 0 0 -10)))
 (setCam)
 
 
@@ -51,8 +51,9 @@
 
 
 (defn p5-setup [this]
-  ;(.size this 800 600 PApplet/OPENGL)
+  ;(.size this 1280 800 PApplet/OPENGL)
   (.size this (.-displayWidth this) (.-displayHeight this) PApplet/OPENGL)
+
   (.parentSetup this) ;calls P5Repl.setup()
   )
 
@@ -140,7 +141,7 @@
                        (hue 255)
                        0
                        255
-                       (* 0.005 (getProp 6 "brightness")))
+                       (* 0.005 (getProp 1 "brightness")))
               (.sphere pG 60))
 
 
@@ -150,7 +151,7 @@
                        (hue 0)
                        255
                        255
-                       (* 500 (- (getProp 6 "noisiness") 0.7)))
+                       (* 500 (- (getProp 1 "noisiness") 0.7)))
               (.sphere pG 80))
 
 
@@ -537,6 +538,8 @@
       )
     )
 
+  ;(.blendMode pG PApplet/BLEND)
+
   (.colorMode pG PApplet/HSB)
 
   ;; BACKGROUND
@@ -586,35 +589,33 @@
 
 
 
-  (let [cc (deref cc)
-        sounds (deref sounds)]
-
-    (cond
-      (= 127 (getCC 27))
-      (drawToneShape sounds cc)
-
-      (= 127 (getCC 28))
-      (drawStackOfRings pG this sounds cc 2)
-
-      (= 127 (getCC 29))
-      (nice-orb pG this sounds cc)
-
-      (= 127 (getCC 30))
-      (drawStem pG this (+ 1 mon))
-
-      )
-
-    )
-
-  (if (= 127 (getCC 38))
-    (drawTvNoise pG (+ 1 mon)))
+  ;; SELECT SCENE
+  ;(let [cc (deref cc)
+  ;      sounds (deref sounds)]
+  ;
+  ;  (cond
+  ;    (= 127 (getCC 27))
+  ;    (drawToneShape sounds cc)
+  ;
+  ;    (= 127 (getCC 28))
+  ;    (drawStackOfRings pG this sounds cc 2)
+  ;
+  ;    (= 127 (getCC 29))
+  ;    (nice-orb pG this sounds cc)
+  ;
+  ;    (= 127 (getCC 30))
+  ;    (drawStem pG this (+ 1 mon))
+  ;
+  ;    )
+  ;
+  ;  )
 
 
   (defn drawPitches [sounds]
     (defn getProp [track propName]
       (first (get sounds (str "/" track "/" propName))))
 
-    (let [pitch (getProp 4 "pitch")]
+    (let [pitch (getProp 2 "pitch")]
       (.hint pG PApplet/DISABLE_DEPTH_MASK)
       (.camera pG)
       (.perspective pG)
@@ -644,9 +645,9 @@
     (defn getProp [track propName]
       (first (get sounds (str "/" track "/" propName))))
 
-    (let [pitch (getProp 3 "pitch")
-          loudness (* 1 (+ 100 (getProp 3 "loudness")))
-          noisiness (getProp 3 "noisiness")
+    (let [pitch (getProp 2 "pitch")
+          loudness (* 1 (+ 100 (getProp 1 "loudness")))
+          noisiness (getProp 1 "noisiness")
           ]
       (.hint pG PApplet/DISABLE_DEPTH_MASK)
       (.camera pG)
@@ -690,6 +691,137 @@
   (if (= 127 (getCC 32))
     (drawMoog (deref sounds)))
 
+
+  (defn drawSpectra [sounds]
+    (defn getSine [track n]
+      (get sounds (str "/" track "/sines/" n)))
+
+    (defn getProp [track propName]
+      (first (get sounds (str "/" track "/" propName))))
+
+    (defn log2 [n] (/ (Math/log n) (Math/log 2)))
+
+    ;(defn ftom [freq]
+    ;  (+
+    ;    69
+    ;    (* 12
+    ;       (log2 (/
+    ;               freq
+    ;               440)))))
+
+    (defn freq-to-radian [freq]
+      (* (PApplet/TWO_PI)
+         (log2 (/
+                 freq
+                 440))))
+
+    (.background pG 0 0 20 5)
+
+    (.blendMode pG PApplet/ADD)
+    (.noStroke pG)
+    ;(.noFill pG)
+    (.fill pG 255 50 50 100)
+    (.sphereDetail pG 4)
+    ;(.sphere pG 1)
+
+    (let [
+          sines (filter
+                  (fn [sine] (> (first sine) 0))
+                  (map
+                    (partial getSine 1)
+                    (range 20 0 -1)))]
+
+      (doall (map (fn [sine]
+                    (let
+                      [freq (first sine)
+                       amp (last sine)
+                       theta (freq-to-radian freq)
+                       r 3
+                       y (/ theta PApplet/TWO_PI)
+                       octave (quot theta PApplet/TWO_PI)]
+
+                      (push-pop pG
+                                (.translate pG
+                                            (* r (- 7 y) (Math/sin (+ (* 0.0001 (.millis this)) theta)))
+                                            (* 10 y)
+                                            (* r (- 7 y) (Math/cos (+ (* 0.0001 (.millis this)) theta))))
+                                (.strokeWeight pG (- 4 (* 2 y)))
+                                (.stroke pG
+                                         (* (mod theta PApplet/TWO_PI)
+                                            (/ 255 PApplet/TWO_PI))
+                                         255
+                                         255
+                                         (* amp 450))
+                                (.sphereDetail pG (- 7 y))
+                                (.sphere pG (- 7 y))
+                                )
+
+                      )
+                    ) sines))
+
+      )
+
+    )
+
+  (defn getkey [keycode] (get keys (Integer. keycode)))
+
+  (defn isCC [cc] (= 127 (getCC cc)))
+
+  (let [cc (deref cc)
+        sounds (deref sounds)]
+
+    ;(cond
+    ;  (getkey 49)
+    ;  (drawSpectra sounds)
+    ;
+    ;  (getkey 50)
+    ;  (drawToneShape sounds cc)
+    ;
+    ;  (getkey 51)
+    ;  (drawStackOfRings pG this sounds cc 1)
+    ;
+    ;  (getkey 52)
+    ;  (nice-orb pG this sounds cc)
+    ;
+    ;  (getkey 53)
+    ;  (drawStem pG this 1)
+    ;
+    ;  )
+
+    (cond
+      (isCC 27)
+      (drawSpectra sounds)
+
+      (isCC 28)
+      (drawToneShape sounds cc)
+
+      (isCC 29)
+      (drawStackOfRings pG this sounds cc 1)
+
+      (isCC 30)
+      (nice-orb pG this sounds cc)
+
+      (isCC 31)
+      (drawStem pG this 1)
+
+      )
+
+    )
+
+  (cond
+    (getkey 55)
+    (drawTvNoise pG 1)
+
+    (getkey 56)
+    (drawPitches (deref sounds))
+
+    (getkey 57)
+    (drawMoog (deref sounds))
+
+    )
+
+
+  ;(drawTvNoise pG 1)
 
 
   ;(tone-shape/draw this pG (deref sounds) (deref cc))

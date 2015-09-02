@@ -42,6 +42,10 @@ public class P5ReplDualMon extends PApplet {
 
         keys.put(37, false);
         keys.put(39, false);
+
+        for (int i = 48; i <= 57; i++) {
+            keys.put(i, false);
+        }
     }
 
     @Override
@@ -155,18 +159,30 @@ public class P5ReplDualMon extends PApplet {
     @Override
     public void keyPressed(KeyEvent e)
     {
+        int keyCode = e.getKeyCode();
+
         // reset scroll on F
-        if(e.getKeyCode() == 70) {
+        if(keyCode == 70) {
             resetScroll();
         }
 
-        keys.put(e.getKeyCode(), true);
+        // 0 - 9
+        if(!(keyCode >= 48 && keyCode <= 57)) {
+            keys.put(keyCode, true);
+        }
     }
 
     @Override
     public void keyReleased(KeyEvent e)
     {
-        keys.put(e.getKeyCode(), false);
+        int keyCode = e.getKeyCode();
+
+        // 0 - 9
+        if((keyCode >= 48 && keyCode <= 57)) {
+            keys.put(keyCode, !keys.get(keyCode));
+        } else {
+            keys.put(e.getKeyCode(), false);
+        }
     }
 
     public void drawReplView(PGraphics pG, int mon, SpaceNavigator spaceNav, Map<Integer, Boolean> keys, int scroll) {}
