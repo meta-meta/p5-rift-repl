@@ -56,14 +56,19 @@
              :octatonic (Scale. :octatonic [1 2 1 2 1 2 1 2])
              })
 
+(def pitch-classes [:c :db :d :e :eb :f :f# :g :ab :a :b])
+
 (def keys (zipmap
-            [:c :db :d :e :eb :f :f# :g :ab :a :b]
+            pitch-classes
             (map
               (partial key-from-scale
                        (:diatonic scales))
               (range))))
 
-(def modes (let [names [:ionian :dorian :phrygian :lydian :mixolydian :aeolian :locrian]]
+(def mode-names-major-scale-order [:ionian :dorian :phrygian :lydian :mixolydian :aeolian :locrian])
+(def mode-names-bright-to-dark-order [:lydian :ionian :mixolydian :dorian :aeolian :phrygian :locrian])
+
+(def modes (let [names mode-names-major-scale-order]
              (zipmap
                names
                (map (fn [i name]
@@ -74,6 +79,8 @@
                                            (take i s))))
                         ))
                     (range) names))))
+
+(def solfege-chromatic [:oh :one :two :three :four :five :six :sev :eight :nine :ten :el])
 
 (defrecord Measure [beats-per-measure length-of-beat phrases])
 (defrecord Phrase [events])
