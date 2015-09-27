@@ -29,10 +29,10 @@ public class P5ReplDualMon extends PApplet {
 
 //        setLocation(1920, 0);
 
-        pGs[1] = createGraphics(width, height, P3D);
+        pGs[0] = createGraphics(width, height, P3D);
 
-        pGs[0] = createGraphics(1024, 768, P3D);
-        mon2 = new PFrame(1024, 768);
+//        pGs[0] = createGraphics(1024, 768, P3D);
+//        mon2 = new PFrame(1024, 768);
 
         spaceNav = new SpaceNavMomentum(this);
         noCursor();
@@ -52,7 +52,7 @@ public class P5ReplDualMon extends PApplet {
     public final void draw() {
         spaceNav.poll();
 
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 1; i++) {
             pGs[i].beginDraw();
 
             try{
@@ -71,10 +71,10 @@ public class P5ReplDualMon extends PApplet {
         }
 
 
-        image(pGs[1], 0, 0);
+        image(pGs[0], 0, 0);
 
-        applet2.image(pGs[0].get(), 0, 0, applet2.w, applet2.h);
-        applet2.redraw();
+//        applet2.image(pGs[0].get(), 0, 0, applet2.w, applet2.h);
+//        applet2.redraw();
     }
 
     private void setScroll(int amt) {

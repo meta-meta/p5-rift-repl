@@ -1,4 +1,4 @@
-(ns music_staff
+(ns music-staff
   (:import (processing.core PApplet))
   (:use p5-help)
   )
@@ -58,12 +58,13 @@
 
 (def pitch-classes [:c :db :d :e :eb :f :f# :g :ab :a :b])
 
-(def keys (zipmap
-            pitch-classes
-            (map
-              (partial key-from-scale
-                       (:diatonic scales))
-              (range))))
+;TODO upgrade to clojure 1.7   keys is in clojure_core and redefining it throws a NPE http://dev.clojure.org/jira/browse/CLJ-1241?page=com.atlassian.jira.plugin.system.issuetabpanels:changehistory-tabpanel
+;(def keys (zipmap
+;            pitch-classes
+;            (map
+;              (partial key-from-scale
+;                       (:diatonic scales))
+;              (range))))
 
 (def mode-names-major-scale-order [:ionian :dorian :phrygian :lydian :mixolydian :aeolian :locrian])
 (def mode-names-bright-to-dark-order [:lydian :ionian :mixolydian :dorian :aeolian :phrygian :locrian])

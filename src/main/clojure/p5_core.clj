@@ -1,6 +1,7 @@
 (ns p5-core
   (:use [tone-shape :only [draw]])
-  (:use music_staff)
+  (:use music-staff)
+  (:use p5-help)
   (:import (processing.core.PApplet)
            (com.generalprocessingunit.hid.megamux ExampleDevice)
            (com.illposed.osc OSCListener)
@@ -17,10 +18,6 @@
 (import processing.core.PVector)
 (import com.generalprocessingunit.processing.space.Camera)
 (import com.generalprocessingunit.processing.space.EuclideanSpaceObject)
-
-(defmacro push-pop [pG & body]
-  (list 'do '(.pushMatrix pG) (cons 'do body) '(.popMatrix pG))
-  )
 
 (defn setCam []
   (def camMount (EuclideanSpaceObject.))
@@ -55,6 +52,7 @@
   (.size this (.-displayWidth this) (.-displayHeight this) PApplet/OPENGL)
 
   (.parentSetup this) ;calls P5Repl.setup()
+  (music-staff/setup this)
   )
 
 ;(def megamux (ExampleDevice.))
@@ -513,7 +511,7 @@
   )
 
 (defn p5-drawReplView [this pG mon spaceNav keys scroll]
-  (.setAlwaysOnTop (.-frame this) true)
+  (.setAlwaysOnTop (.-frame this) false)
   ;(.noCursor this)
   ;(.cursor this PApplet/ARROW)
 
@@ -538,8 +536,7 @@
       )
     )
 
-  ;(.blendMode pG PApplet/BLEND)
-
+  (.blendMode pG PApplet/BLEND)
   (.colorMode pG PApplet/HSB)
 
   ;; BACKGROUND
@@ -825,7 +822,7 @@
 
 
   ;(tone-shape/draw this pG (deref sounds) (deref cc))
-  ;(music_staff/drawme this pG (deref sounds))
+  (music-staff/drawme this pG (deref sounds))
 
   ;(drawStem pG this)
   ;(drawStackOfRings pG this)
